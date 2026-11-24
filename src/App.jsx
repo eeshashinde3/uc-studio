@@ -2455,39 +2455,39 @@ export default function App() {
     const p02Share = ((analytics.slotCount / t) * 100).toFixed(1);
     const p1Share = ((analytics.continuityAndSupportCount / t) * 100).toFixed(1);
 
-    const rice1 = Math.round(((3.8 * 2.0 * 0.85) / 1.5) * 100);
-    const rice2 = Math.round(((4.5 * 2.0 * 0.80) / 1.5) * 100);
-    const rice3 = Math.round(((5.2 * 1.5 * 0.75) / 2.0) * 100);
+    const rice1 = Math.round(((1.71 * 2.0 * 0.85) / 1.5) * 100); // 194
+    const rice2 = Math.round(((2.025 * 2.0 * 0.80) / 1.5) * 100); // 216
+    const rice3 = Math.round(((2.34 * 1.5 * 0.75) / 2.0) * 100); // 132
 
     return [
       {
         rank: "P0-1",
         riceScore: `RICE: ${rice2}`,
-        riceFormula: "(4.5M Reach × 2.0 Impact × 80% Conf) / 1.5 PM × 100 = 480",
+        riceFormula: "(2.025M Qtr Reach × 2.0 Impact × 80% Conf) / 1.5 PM × 100 = 216",
         title: "Pre-Slot Reliability Badge & 1-Tap Self-Reschedule UX",
-        targetCohort: "Evening (5–8 PM) & Weekend Salon, Plumbing & Urgent Bookings (4.5M ATUs)",
+        targetCohort: "Evening (5–8 PM) & Weekend Peak Bookings (4.5M Annual → 2.025M Qtr Anchor Users)",
         signalEvidence: `${p02Share}% raw (${analytics.slotCount}/${t} — directional)`,
-        liftRationale: "Surfacing real-time slot-fill confidence at checkout shifts ~22% of flexible users from congested evening slots (42.0% baseline repeat) to high-fill morning slots, while T-90m 1-tap self-reschedule prevents partner-cancellation defection.",
+        liftRationale: "Surfacing live slot-fill confidence at checkout shifts ~22% of flexible users from congested evening slots (42.0% assumed baseline repeat) to high-fill morning slots, while T-90m 1-tap self-reschedule prevents cancellation churn (+4.5% / +7.0% / +9.5% relative lift on the 42.0% baseline).",
         scenarios: {
-          low: "4.5M ATUs × 11.0% pain × +4.5% relative lift (+1.89 pp) = +22,275 repeat bookings (+0.22 pp overall 90d repeat)",
-          base: "4.5M ATUs × 12.5% pain × +7.0% relative lift (+2.94 pp) = +39,375 repeat bookings (+0.39 pp overall 90d repeat)",
-          high: "4.5M ATUs × 14.0% pain × +9.5% relative lift (+3.99 pp) = +59,850 repeat bookings (+0.60 pp overall 90d repeat)"
+          low: "2.025M qtr users × 11.0% pain × (42.0% × +4.5% rel = +1.89 pp) = +4,210 repeat bookings (+0.09 pp overall 90d repeat)",
+          base: "2.025M qtr users × 12.5% pain × (42.0% × +7.0% rel = +2.94 pp) = +7,442 repeat bookings (+0.17 pp overall 90d repeat)",
+          high: "2.025M qtr users × 14.0% pain × (42.0% × +9.5% rel = +3.99 pp) = +11,312 repeat bookings (+0.25 pp overall 90d repeat)"
         },
-        p0Rationale: "Ranked #1 by RICE (480) because slot roulette is the #1 iOS/Play Store blocker and pure checkout UX nudging requires zero partner dispatch or payout edits.",
+        p0Rationale: "Ranked #1 by RICE (216) because slot roulette is the #1 iOS/Play Store blocker and pure checkout UX nudging requires zero partner dispatch or payout edits.",
         mechanism: "Checkout slot-picker displays 'High Reliability Slot' vs. 'Peak Congestion' badges + proactive T-90m 1-tap self-reschedule drawer with zero cancellation fee."
       },
       {
         rank: "P0-2",
         riceScore: `RICE: ${rice1}`,
-        riceFormula: "(3.8M Reach × 2.0 Impact × 85% Conf) / 1.5 PM × 100 = 431",
+        riceFormula: "(1.71M Qtr Reach × 2.0 Impact × 85% Conf) / 1.5 PM × 100 = 194",
         title: "Interactive Pre-Job Scope Checklist & Benchmark Spare-Part Verifier",
-        targetCohort: "AC & Appliance Repair, Deep Cleaning, Painting (3.8M India ATUs)",
+        targetCohort: "AC & Appliance Repair, Deep Cleaning, Painting (3.8M Annual → 1.71M Qtr Anchor Users)",
         signalEvidence: `${p01Share}% raw (${analytics.scopeAndPartCount}/${t} — directional)`,
-        liftRationale: "Eliminates surprise on-site gas/spare-part upsell shock and cleaning exclusion disputes. Recovering 15%–25% of quote-shock detractors yields +4.0% / +6.5% / +9.0% relative lift on the 42.0% cohort repeat baseline.",
+        liftRationale: "Eliminates surprise on-site gas/spare-part upsell shock and cleaning exclusion disputes. Recovering 15%–25% of quote-shock detractors yields +4.0% / +6.5% / +9.0% relative lift on the 42.0% assumed cohort repeat baseline.",
         scenarios: {
-          low: "3.8M ATUs × 18.0% pain × +4.0% relative lift (+1.68 pp) = +27,360 repeat bookings (+0.27 pp overall 90d repeat)",
-          base: "3.8M ATUs × 22.6% pain × +6.5% relative lift (+2.73 pp) = +55,822 repeat bookings (+0.56 pp overall 90d repeat)",
-          high: "3.8M ATUs × 26.0% pain × +9.0% relative lift (+3.78 pp) = +88,920 repeat bookings (+0.89 pp overall 90d repeat)"
+          low: "1.71M qtr users × 18.0% pain × (42.0% × +4.0% rel = +1.68 pp) = +5,171 repeat bookings (+0.11 pp overall 90d repeat)",
+          base: "1.71M qtr users × 22.6% pain × (42.0% × +6.5% rel = +2.73 pp) = +10,550 repeat bookings (+0.23 pp overall 90d repeat)",
+          high: "1.71M qtr users × 26.0% pain × (42.0% × +9.0% rel = +3.78 pp) = +16,806 repeat bookings (+0.37 pp overall 90d repeat)"
         },
         p0Rationale: "P0 because diagnostic & scope distrust drives the highest-AOV Non-Returner churn and operates purely on the customer transparency layer.",
         mechanism: "Visual 'Included vs. Excluded' checklist at checkout + in-app Benchmark Spare-Part Rate Card requiring 1-tap customer digital sign-off before part replacement."
@@ -2495,15 +2495,15 @@ export default function App() {
       {
         rank: "P1",
         riceScore: `RICE: ${rice3}`,
-        riceFormula: "(5.2M Reach × 1.5 Impact × 75% Conf) / 2.0 PM × 100 = 293",
+        riceFormula: "(2.34M Qtr Reach × 1.5 Impact × 75% Conf) / 2.0 PM × 100 = 132",
         title: "Pre-Checkout Pro Credentials, 'My Trusted Pro' Re-Book & Digital Job Card",
-        targetCohort: "Satisfied 1st-Timers in Salon, Cleaning & Handyman (5.2M ATUs)",
+        targetCohort: "Satisfied 1st-Timers in Salon, Cleaning & Handyman (5.2M Annual → 2.34M Qtr Anchor Users)",
         signalEvidence: `${p1Share}% combined (${analytics.continuityAndSupportCount}/${t} — directional)`,
-        liftRationale: "Closing the off-app WhatsApp disintermediation leak and surfacing pro credentials pre-checkout converts satisfied single-visit customers into recurring 30–60d multi-category habit loops (+3.0% / +5.0% / +7.0% relative lift on 42.0% baseline).",
+        liftRationale: "Closing the off-app WhatsApp disintermediation leak and surfacing pro credentials pre-checkout converts satisfied single-visit customers into recurring 30–60d multi-category habit loops (+3.0% / +5.0% / +7.0% relative lift on 42.0% assumed baseline).",
         scenarios: {
-          low: "5.2M ATUs × 15.0% eligible × +3.0% relative lift (+1.26 pp) = +23,400 repeat bookings (+0.23 pp overall 90d repeat)",
-          base: "5.2M ATUs × 18.0% eligible × +5.0% relative lift (+2.10 pp) = +46,800 repeat bookings (+0.47 pp overall 90d repeat)",
-          high: "5.2M ATUs × 22.0% eligible × +7.0% relative lift (+2.94 pp) = +80,080 repeat bookings (+0.80 pp overall 90d repeat)"
+          low: "2.34M qtr users × 15.0% eligible × (42.0% × +3.0% rel = +1.26 pp) = +4,423 repeat bookings (+0.10 pp overall 90d repeat)",
+          base: "2.34M qtr users × 18.0% eligible × (42.0% × +5.0% rel = +2.10 pp) = +8,845 repeat bookings (+0.20 pp overall 90d repeat)",
+          high: "2.34M qtr users × 22.0% eligible × (42.0% × +7.0% rel = +2.94 pp) = +15,135 repeat bookings (+0.34 pp overall 90d repeat)"
         },
         p0Rationale: "P1 (2.0 PM effort) because pro-preference matching requires slot-calendar UI integration and compounds retention once P0 slot and quote leaks are sealed.",
         mechanism: "Shows pro rating, tenure & specialization before payment; enables 'Request Same Pro' on repeat bookings; issues a persistent Digital Job Card with 1-tap warranty claim."
@@ -2584,7 +2584,7 @@ export default function App() {
       return;
     }
 
-    const prompt = `You are the Urban Company India Discovery Engine (Prompt v2.5-single-truth). Analyze this customer feedback:
+    const prompt = `You are the Urban Company India Discovery Engine (Prompt v2.6-single-truth). Analyze this customer feedback:
 "${testInput}"
 Return ONLY valid JSON with keys:
 - is_valid_india_core (boolean: false if outside India or about InstaHelp / 15-30 min instant maid)
@@ -2661,7 +2661,7 @@ Return ONLY valid JSON with keys:
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              RHP / Shareholder Anchor: ~82–86% Retained NTV • ~10.0M India ATUs • 42.0% Baseline 90d Repeat • 4.81★ Avg
+              RHP Anchor: ~82–86% Repeat NTV Share • ~10.0M Annual ATUs (4.50M Qtr Anchor Cohort) • 42.0% Assumed Baseline 90d Repeat (35–50% Sens.)
             </p>
           </div>
         </div>
@@ -2687,7 +2687,7 @@ Return ONLY valid JSON with keys:
       <div className="bg-slate-900 text-white px-5 py-2.5 flex items-center gap-2.5 text-xs">
         <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
         <span>
-          <strong className="text-amber-300">Headline Insight:</strong> Repeaters anchor on fixed-scope SKUs (Salon/Cleaning SOPs) and morning slots, whereas Non-Returners defect after evening slot cancellations and unverified spare-part/scope upsells—fixing checkout slot reliability and pre-job scope transparency can lift overall 90-day repeat by <strong>+1.11 pp deduplicated base</strong> (from 42.0% to 43.11%) with zero discounts or partner payout changes.
+          <strong className="text-amber-300">Headline Insight:</strong> Repeaters anchor on fixed-scope SKUs (Salon/Cleaning SOPs) and morning slots, whereas Non-Returners defect after evening slot cancellations and unverified spare-part/scope upsells—fixing checkout slot reliability and pre-job scope transparency can lift overall 90-day repeat by <strong>+0.47 pp deduplicated base</strong> (from 42.0% assumed baseline to 42.47%; +20,933 net repeat bookings/qtr) with zero discounts or partner payout changes.
         </span>
       </div>
 
@@ -2695,7 +2695,7 @@ Return ONLY valid JSON with keys:
         <div className="flex items-center gap-2 text-indigo-950 font-medium">
           <Target className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>
-            <strong>Target:</strong> <span className="text-indigo-700 font-bold">+1.11 pp</span> Deduplicated 90-Day Repeat Lift (<strong>42.0% → 43.11%</strong>; +110,758 net repeat bookings/qtr)
+            <strong>Target:</strong> <span className="text-indigo-700 font-bold">+0.47 pp</span> Deduplicated 90-Day Repeat Lift (<strong>42.0% assumed → 42.47%</strong>; +20,933 net repeat bookings/qtr across 4.50M quarterly anchor users)
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
@@ -2858,17 +2858,20 @@ Return ONLY valid JSON with keys:
             <div className="space-y-4">
               <div className="bg-white border border-indigo-200 rounded-xl p-4 text-xs text-slate-700 space-y-2 shadow-xs">
                 <div className="font-bold text-slate-900 text-sm">
-                  Baseline Repeat Rate & Deduplicated Portfolio Sizing (Low / Base / High)
+                  Assumed Baseline Repeat Rate (35%–50% Sensitivity) & Deduplicated Quarterly Sizing
                 </div>
                 <p>
-                  <strong>Baseline Anchor:</strong> <strong>42.0%</strong> 90-day repeat rate across ~10.0M India Annual Transacting Users (4.20M baseline repeaters/qtr, calibrated to UC's RHP & Q2 FY27 Shareholder disclosures showing ~82–86% of India Consumer Services NTV from retained users).
+                  <strong>Reach & Cadence Conversion:</strong> Urban Company RHP / Q2 FY27 Shareholder disclosures report ~10.0M India Annual Transacting Users (ATUs) and ~82–86% repeat NTV revenue share (not a user-level 90d repeat rate). Converting annual ATUs to quarterly active anchor cohorts (<strong>10.0M × 45% quarterly active assumption = 4.50M quarterly anchor users</strong>; ~1.50M/month) and modeling <strong>42.0% 90-day repeat as an explicit assumption</strong> yields 1.89M baseline quarterly repeaters.
                 </p>
                 <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 space-y-1 font-mono text-[11px]">
                   <div className="text-slate-600">
-                    Naive Unadjusted Sum: +0.73 pp Low (+73,035) | +1.42 pp Base (+141,997) | +2.29 pp High (+228,850)
+                    Naive Unadjusted Sum (42.0% baseline): +0.31 pp Low (+13,804) | +0.60 pp Base (+26,837) | +0.96 pp High (+43,253)
                   </div>
                   <div className="text-indigo-900 font-bold">
-                    Deduplicated Combined Range (×0.78 overlap factor for 22% multi-pain user overlap): +0.57 pp Low (+56,967) | +1.11 pp Base (+110,758 → 43.11% repeat) | +1.79 pp High (+178,503)
+                    Deduplicated Combined Range (×0.78 overlap assumption for 22% multi-pain user overlap): +0.24 pp Low (+10,767) | +0.47 pp Base (+20,933 → 42.47% repeat) | +0.75 pp High (+33,737)
+                  </div>
+                  <div className="text-slate-600 pt-1 border-t border-indigo-200/60">
+                    Baseline Repeat Sensitivity (Deduplicated Base Case): At 35.0% baseline → +0.39 pp (+17,444) | At 42.0% baseline → +0.47 pp (+20,933) | At 50.0% baseline → +0.55 pp (+24,920)
                   </div>
                 </div>
               </div>
@@ -2916,13 +2919,13 @@ Return ONLY valid JSON with keys:
                     <strong>1. Design & Unit:</strong> User-level 50/50 randomized A/B test across Tier-1 metros (Bengaluru, Pune, Mumbai, Delhi NCR) on P0-1 (Slot Reliability UX) and P0-2 (Scope & Benchmark Part Verifier).
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>2. Sample & Power:</strong> ~180k completed anchor bookings/arm over 4 weeks + 90-day observation window (80% power, α = 0.05 to detect ≥ +0.40 pp 90d repeat lift).
+                    <strong>2. Sample & Power:</strong> ~220k completed anchor bookings/arm over 4 weeks (~1.50M monthly anchor cohort) + 90-day observation window (80% power, α = 0.05 to detect ≥ +0.25 pp 90d repeat lift).
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
                     <strong>3. Primary & Leading Metrics:</strong> 90-day post-anchor repeat booking rate (Primary); 30-day repeat, checkout conversion & on-site quote approval rate (Leading).
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.40 pp AND cancellations stay ≤ +0.3 pp, support tickets ≤ 0%, and net partner earnings/hr ≥ ₹0.
+                    <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.25 pp AND cancellations stay ≤ +0.3 pp, support tickets ≤ 0%, and net partner earnings/hr ≥ ₹0.
                   </div>
                 </div>
               </div>
@@ -3152,7 +3155,7 @@ Return ONLY valid JSON with keys:
 
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-700 flex flex-wrap gap-4">
                   <span><strong>Model:</strong> gemini-2.5-flash</span>
-                  <span><strong>Prompt:</strong> prompt-v2.5-single-truth</span>
+                  <span><strong>Prompt:</strong> prompt-v2.6-single-truth</span>
                   <span><strong>Audit Scope:</strong> 12 Base + 20 New Records (044–100)</span>
                 </div>
 
@@ -3200,7 +3203,7 @@ Return ONLY valid JSON with keys:
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Live AI Gatekeeper & Tagger
             </div>
             <p className="text-[11px] text-slate-600">
-              Test live scope filtering & causal extraction (<code>gemini-2.5-flash</code> / <code>prompt-v2.5-single-truth</code>):
+              Test live scope filtering & causal extraction (<code>gemini-2.5-flash</code> / <code>prompt-v2.6-single-truth</code>):
             </p>
             <textarea
               rows={3}
