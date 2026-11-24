@@ -2216,7 +2216,7 @@ const LABELING_RUBRIC = [
   },
   {
     field: "repeat_status = Non-Returner",
-    rule: "Assigned ONLY when text explicitly states defection ('switched to local', 'never booking again', 'uninstalled') or single-visit abandonment after acute failure."
+    rule: "Assigned when text states defection ('switched to local', 'never booking again', 'cancelled and bought elsewhere'), OR when a single-visit review describes an acute failure with no stated intent to rebook. The second case is an INFERENCE (weaker signal), so the Non-Returner share is an upper bound."
   },
   {
     field: "repeat_status = Unknown",
@@ -2396,6 +2396,10 @@ export default function App() {
       buildCohortRow("Tier-1 Metros (Bengaluru, Mumbai, Pune, Delhi NCR, Hyd, Chn, Kol)", (x) => x.city_tier === "Tier-1 Metro"),
       buildCohortRow("Tier-2+ Cities (Jaipur, Lucknow, Ahmedabad, Kochi, Chandigarh)", (x) => x.city_tier === "Tier-2+"),
       buildCohortRow("City Not Disclosed in Public Review", (x) => x.city_tier === "Not Disclosed"),
+      buildCohortRow("Household: Working Professional / Nuclear", (x) => x.household_segment === "Working Professional / Nuclear"),
+      buildCohortRow("Household: Family / Multi-Member", (x) => x.household_segment === "Family / Multi-Member"),
+      buildCohortRow("Household: Bachelor / Rented Flat", (x) => x.household_segment === "Bachelor / Rented Flat"),
+      buildCohortRow("Household: Not Disclosed", (x) => x.household_segment === "Not Disclosed"),
       buildCohortRow("Category: Salon & Spa", (x) => x.category === "Salon & Spa"),
       buildCohortRow("Category: AC & Appliance Repair", (x) => x.category === "AC & Appliance Repair"),
       buildCohortRow("Category: Deep Cleaning & Pest Control", (x) => x.category === "Deep Cleaning & Pest Control"),
@@ -2544,7 +2548,7 @@ export default function App() {
       },
       {
         q: "7. How do patterns differ by category, city, household & channel?",
-        a: `See the exact n-per-cell Q7 Cohort Matrix above: Salon & Cleaning skew heavily Returner (SOP praise), while AC/Appliance & Plumbing skew Non-Returner (spare-part distrust). Tier-1 metros dominate peer Reddit discussions; ${analytics.notDisclosedCityCount}/${t} records do not disclose city.`
+        a: `See the exact n-per-cell Q7 Cohort Matrix above: Salon & Cleaning skew heavily Returner (SOP praise), while AC/Appliance & Plumbing skew Non-Returner (spare-part distrust). Tier-1 metros dominate peer Reddit discussions; ${analytics.notDisclosedCityCount}/${t} records do not disclose city. Household type is stated in only part of the corpus (see matrix); first-discovery channel is not observable in public data.`
       },
       {
         q: "8. What unmet needs emerge consistently across conversations?",
@@ -2703,7 +2707,7 @@ Return ONLY valid JSON with keys:
             Guardrail 1: Cancellations <strong>≤ +0.3 pp</strong>
           </span>
           <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
-            Guardrail 2: Support Tickets <strong>-15% (≤ 0% ceiling)</strong>
+            Guardrail 2: Support Tickets per booking <strong>no increase (≤ 0%)</strong>
           </span>
           <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
             Guardrail 3: Net Pro Earnings/Hr <strong>≥ ₹0 (Neutral/Up)</strong>
@@ -2863,6 +2867,9 @@ Return ONLY valid JSON with keys:
                 <p>
                   <strong>Reach & Cadence Conversion:</strong> Urban Company RHP / Q2 FY27 Shareholder disclosures report ~10.0M India Annual Transacting Users (ATUs) and ~82–86% repeat NTV revenue share (not a user-level 90d repeat rate). Converting annual ATUs to quarterly active anchor cohorts (<strong>10.0M × 45% quarterly active assumption = 4.50M quarterly anchor users</strong>; ~1.50M/month) and modeling <strong>42.0% 90-day repeat as an explicit assumption</strong> yields 1.89M baseline quarterly repeaters.
                 </p>
+                <p className="text-[11px] text-slate-600">
+                  <strong>Assumptions (PM estimates, not company data):</strong> 45% quarterly-active factor, applied to the 10.0M total and to each segment (4.5M→2.025M, 3.8M→1.71M, 5.2M→2.34M; segment annual ATUs assumed at 45%, 38% and 52% of 10.0M and overlapping). Pain % is a proxy (theme share of public feedback, not true customer incidence). Lift % is relative to the 42.0% baseline (pp lift = 42.0% × relative lift) and has no public benchmark, so the A/B test validates it. The 0.78 overlap factor exists because segment reaches sum to 6.08M, above the 4.50M cohort.
+                </p>
                 <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 space-y-1 font-mono text-[11px]">
                   <div className="text-slate-600">
                     Naive Unadjusted Sum (42.0% baseline): +0.31 pp Low (+13,804) | +0.60 pp Base (+26,837) | +0.96 pp High (+43,253)
@@ -2892,6 +2899,9 @@ Return ONLY valid JSON with keys:
 
                   <h3 className="text-sm font-bold text-slate-900">{opp.title}</h3>
                   <p className="text-xs text-slate-700 leading-relaxed">{opp.mechanism}</p>
+                  <div className="text-[11px] text-slate-600">
+                    <strong>Target cohort:</strong> {opp.targetCohort}
+                  </div>
 
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[11px]">
                     <div className="font-semibold text-slate-800">
@@ -2916,16 +2926,16 @@ Return ONLY valid JSON with keys:
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px] text-slate-700">
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>1. Design & Unit:</strong> User-level 50/50 randomized A/B test across Tier-1 metros (Bengaluru, Pune, Mumbai, Delhi NCR) on P0-1 (Slot Reliability UX) and P0-2 (Scope & Benchmark Part Verifier).
+                    <strong>1. Design & Unit:</strong> User-level 50/50 randomized A/B across Tier-1 metros: Control vs. Bundle arm (P0-1 Slot Reliability + P0-2 Scope & Benchmark Verifier + P1 Pro Credentials). Tested as a bundle because single-feature effects (+0.17 to +0.23 pp base) are below the detectable range; per-feature attribution uses 30-day leading metrics.
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>2. Sample & Power:</strong> ~220k completed anchor bookings/arm over 4 weeks (~1.50M monthly anchor cohort) + 90-day observation window (80% power, α = 0.05 to detect ≥ +0.25 pp 90d repeat lift).
+                    <strong>2. Sample & Power:</strong> ~425k completed anchor bookings per arm (~850k total; ~6 weeks of enrolment, assuming Tier-1 metros ≈ 50% of ~1.5M monthly anchors) + 90-day observation. 80% power, α = 0.05, 42% baseline → minimum detectable effect ≈ +0.30 pp (expected bundle effect: +0.47 pp base, +0.24 pp low). Low-case effects are not detectable; flagged as a limitation.
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>3. Primary & Leading Metrics:</strong> 90-day post-anchor repeat booking rate (Primary); 30-day repeat, checkout conversion & on-site quote approval rate (Leading).
+                    <strong>3. Primary & Leading Metrics:</strong> 90-day post-anchor repeat booking rate (Primary); 30-day repeat, checkout conversion, slot-reschedule rate & on-site quote approval rate (Leading).
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.25 pp AND cancellations stay ≤ +0.3 pp, support tickets ≤ 0%, and net partner earnings/hr ≥ ₹0.
+                    <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.30 pp AND cancellations stay ≤ +0.3 pp, support tickets per booking show no increase, and net partner earnings/hr ≥ ₹0.
                   </div>
                 </div>
               </div>
@@ -3022,7 +3032,7 @@ Return ONLY valid JSON with keys:
                       <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">
                         {item.root_cause_theme}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400">ID: {item.author_id}</span>
+                      <span className="text-[10px] font-mono text-slate-400">Anon ID: {item.author_id}</span>
                       {item.alternative_mentioned && item.alternative_mentioned !== "None" && (
                         <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
                           Leakage: {item.alternative_mentioned}
@@ -3073,6 +3083,10 @@ Return ONLY valid JSON with keys:
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-0.5">
+                  <div><strong>Reading note:</strong> Directional correlation only. People who disclose a city or household are often longer-term, more engaged users, so "Not Disclosed" gaps may reflect posting habits, not true city or household effects.</div>
+                  <div><strong>Channel</strong> rows show where a review was posted, not how the customer first discovered Urban Company (not observable in public data).</div>
                 </div>
               </div>
 
@@ -3126,7 +3140,7 @@ Return ONLY valid JSON with keys:
 
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 shadow-xs">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-indigo-600" /> 2. Deterministic Labeling Rubric (Zero Inference Rule)
+                  <CheckSquare className="w-4 h-4 text-indigo-600" /> 2. Deterministic Labeling Rubric (Explicit Signals First, Inference Flagged)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
                   {LABELING_RUBRIC.map((lr, idx) => (
@@ -3166,7 +3180,7 @@ Return ONLY valid JSON with keys:
                         <th className="py-1.5 px-2">Theme Cluster</th>
                         <th className="py-1.5 px-2">Audited (n)</th>
                         <th className="py-1.5 px-2">Exact Match</th>
-                        <th className="py-1.5 px-2">Per-Theme Precision</th>
+                        <th className="py-1.5 px-2">Per-Theme Accuracy</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3192,6 +3206,24 @@ Return ONLY valid JSON with keys:
                     </div>
                   ))}
                 </div>
+
+                <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900">
+                  <strong>Audit sampling:</strong> 12 base + 20 new records (044–100), hand-picked across channels (not random); single reviewer, no second rater. Membership Parity and Other Friction themes were outside the 32-record sample.
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-amber-600" /> 4. Methods & Limitations
+                </h3>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-700">
+                  <li><strong>Sampling:</strong> purposive, hand-curated public records across 6 channels (Aug 2025–Nov 2026), not a random sample. N = 100 is directional.</li>
+                  <li><strong>Observability:</strong> no anchor-booking timestamps. Repeat labels come from text signals only, and Non-Returner includes inferred cases (upper bound).</li>
+                  <li><strong>Silent churn:</strong> invisible in public data and not corrected. The 42% baseline is an assumption (35–50% sensitivity).</li>
+                  <li><strong>Reweighting:</strong> channel weights are assumptions, shown as a sensitivity range, not a correction.</li>
+                  <li><strong>Language:</strong> Hinglish text is analysed as-is and was not validated separately.</li>
+                  <li><strong>Sizing:</strong> pain %, lift % and overlap are PM assumptions, to be validated by the A/B test.</li>
+                </ul>
               </div>
             </div>
           )}
