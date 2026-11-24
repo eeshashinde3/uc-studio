@@ -2607,7 +2607,7 @@ Return ONLY valid JSON with keys:
 
     try {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -3168,7 +3168,7 @@ Return ONLY valid JSON with keys:
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-700 flex flex-wrap gap-4">
-                  <span><strong>Model:</strong> gemini-2.5-flash</span>
+                  <span><strong>Model:</strong> gemini-3.8-flash</span>
                   <span><strong>Prompt:</strong> prompt-v2.6-single-truth</span>
                   <span><strong>Audit Scope:</strong> 12 Base + 20 New Records (044–100)</span>
                 </div>
@@ -3235,7 +3235,7 @@ Return ONLY valid JSON with keys:
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Live AI Gatekeeper & Tagger
             </div>
             <p className="text-[11px] text-slate-600">
-              Test live scope filtering & causal extraction (<code>gemini-2.5-flash</code> / <code>prompt-v2.6-single-truth</code>):
+              Test live scope filtering & causal extraction (<code>gemini-3.8-flash</code> / <code>prompt-v2.6-single-truth</code>):
             </p>
             <textarea
               rows={3}
