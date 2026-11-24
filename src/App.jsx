@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
-  Search, Upload, Sparkles, Filter, CheckCircle2, XCircle,
-  BarChart3, MessageSquareQuote, ShieldAlert, Layers, FileJson,
-  Database, EyeOff, Scale, ClipboardCheck,
-  Target, Ban, BookOpen, CheckSquare, Lightbulb, FlaskConical
+  ArrowRight, Upload, Sparkles, X, CheckCircle2, XCircle,
+  Search, MessageSquare, ShieldAlert, FileJson, SlidersHorizontal
 } from 'lucide-react';
 
 const CORPUS_100 = [
@@ -2263,35 +2261,40 @@ const HUMAN_VALIDATION_LOG = [
 
 const NOT_BUILDING = [
   {
-    idea: "1. Promotional Discounts, Cashback Coupons, or Free Plus Trials",
-    why: "Explicitly prohibited by case constraints. Discounts rent low-intent volume without fixing root trust/slot friction and erode unit economics."
+    idea: "Promotional Discounts, Cashback Coupons, or Free Plus Trials",
+    why: "Prohibited by scope guardrails. Discounts rent low-intent volume without fixing root trust or slot friction."
   },
   {
-    idea: "2. Mandatory Standby / Backup Partner Lock 2 Hours Prior",
-    why: "Violates the 'no partner operations or payout changes' constraint—holding idle partner capacity depresses pro utilization and net hourly earnings."
+    idea: "Mandatory Standby / Backup Partner Lock 2 Hours Prior",
+    why: "Violates the 'no partner operations or payout changes' rule—holding idle capacity lowers pro net earnings/hr."
   },
   {
-    idea: "3. Unconditional Instant Auto-Refund Bot for Warranty Claims",
-    why: "Creates severe moral hazard and false-claim abuse on high-ticket spare parts; replaced with structured Digital Job Card evidence + fast human escalation."
+    idea: "Unconditional Instant Auto-Refund Bot for Warranty Claims",
+    why: "Creates moral hazard on high-ticket spare parts; replaced with Digital Job Card evidence + fast human review."
   },
   {
-    idea: "4. Dynamic Peak-Hour Surge Pricing or SKU Price Cuts",
-    why: "Violates pricing-change guardrails and worsens price-unpredictability complaints (already a top trust blocker on Reddit and Trustpilot)."
+    idea: "Dynamic Peak-Hour Surge Pricing or SKU Price Cuts",
+    why: "Violates pricing guardrails and worsens price-unpredictability complaints across Reddit and Trustpilot."
   }
+];
+
+const SUGGESTED_PROMPTS = [
+  "Why do people stop booking Urban Company after one visit?",
+  "What separates Returners from Non-Returners across categories?",
+  "What unmet needs emerge consistently across conversations?"
 ];
 
 export default function App() {
   const [corpus, setCorpus] = useState(CORPUS_100);
-  const [datasetLabel, setDatasetLabel] = useState(
-    `Single JSON Source of Truth (N = ${CORPUS_100.length} • 6 Channels)`
-  );
-  const [activeTab, setActiveTab] = useState("opportunities");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [selectedRepeatStatus, setSelectedRepeatStatus] = useState("ALL");
-  const [selectedSource, setSelectedSource] = useState("ALL");
+  const [datasetLabel, setDatasetLabel] = useState(`N = ${CORPUS_100.length} • 6 Indian Channels`);
+  const [selectedThemeFilter, setSelectedThemeFilter] = useState("ALL");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("ALL");
+  const [selectedRepeatFilter, setSelectedRepeatFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedItem, setSelectedItem] = useState(CORPUS_100[0]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [heroQuestion, setHeroQuestion] = useState("");
   const [testInput, setTestInput] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractorResult, setExtractorResult] = useState(null);
@@ -2306,7 +2309,6 @@ export default function App() {
         const parsed = JSON.parse(evt.target.result);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setCorpus(parsed);
-          setSelectedItem(parsed[0]);
           setDatasetLabel(`${file.name} (N = ${parsed.length})`);
         } else {
           alert("Uploaded JSON must be a non-empty array of tagged records.");
@@ -2373,13 +2375,24 @@ export default function App() {
         const minVal = Math.min(rawPct, equalPct, stratPct).toFixed(1);
         const maxVal = Math.max(rawPct, equalPct, stratPct).toFixed(1);
 
+        const salon = corpus.filter((x) => x.root_cause_theme === name && x.category === "Salon & Spa").length;
+        const appliance = corpus.filter((x) => x.root_cause_theme === name && x.category === "AC & Appliance Repair").length;
+        const cleaning = corpus.filter((x) => x.root_cause_theme === name && x.category === "Deep Cleaning & Pest Control").length;
+        const handyman = corpus.filter((x) => x.root_cause_theme === name && x.category === "Plumbing, Electrical & Carpentry").length;
+        const multiPaint = corpus.filter((x) => x.root_cause_theme === name && (x.category === "General Multi-Category" || x.category === "Painting & Home Improvement")).length;
+
+        const isDriver = name === "Standardized SOP & Convenience Praise";
+        const isLimited = name === "Membership Parity & Trust Escalation" || name === "Other Friction";
+
         return {
           name,
           count,
           rawPct: rawPct.toFixed(1),
           equalPct: equalPct.toFixed(1),
           stratPct: stratPct.toFixed(1),
-          spread: `${minVal}% – ${maxVal}%`
+          spread: `${minVal}% – ${maxVal}%`,
+          cells: { salon, appliance, cleaning, handyman, multiPaint },
+          withinRules: isDriver ? "Driver" : isLimited ? "Partly" : "Yes"
         };
       })
       .sort((a, b) => b.count - a.count);
@@ -2411,18 +2424,6 @@ export default function App() {
       buildCohortRow("Channel: YouTube & X Social Commentary", (x) => x.channel_group === "Social / Video")
     ];
 
-    const notDisclosedCityCount = corpus.filter((x) => x.city_tier === "Not Disclosed").length;
-
-    const altRecords = corpus.filter((x) => x.alternative_mentioned && x.alternative_mentioned !== "None");
-    const altTotal = altRecords.length;
-    const altLocal = altRecords.filter((x) =>
-      x.alternative_mentioned.includes("Local") || x.alternative_mentioned.includes("DIY")
-    ).length;
-    const altCompetitor = altRecords.filter((x) => x.alternative_mentioned.includes("Competitor")).length;
-    const altBrand = altRecords.filter((x) => x.alternative_mentioned.includes("Brand")).length;
-    const altSociety = altRecords.filter((x) => x.alternative_mentioned.includes("Society")).length;
-    const altOffAppPro = altRecords.filter((x) => x.alternative_mentioned.includes("Off-App")).length;
-
     const countTheme = (tName) => byTheme[tName] || 0;
     const scopeAndPartCount =
       countTheme("Diagnostic & Spare-Part Upsell Distrust") +
@@ -2440,13 +2441,6 @@ export default function App() {
       byRepeat,
       exactSubstringMatches,
       q7Matrix,
-      notDisclosedCityCount,
-      altTotal,
-      altLocal,
-      altCompetitor,
-      altBrand,
-      altSociety,
-      altOffAppPro,
       scopeAndPartCount,
       slotCount,
       continuityAndSupportCount
@@ -2459,120 +2453,80 @@ export default function App() {
     const p02Share = ((analytics.slotCount / t) * 100).toFixed(1);
     const p1Share = ((analytics.continuityAndSupportCount / t) * 100).toFixed(1);
 
-    const rice1 = Math.round(((1.71 * 2.0 * 0.85) / 1.5) * 100); // 194
-    const rice2 = Math.round(((2.025 * 2.0 * 0.80) / 1.5) * 100); // 216
-    const rice3 = Math.round(((2.34 * 1.5 * 0.75) / 2.0) * 100); // 132
-
     return [
       {
         rank: "P0-1",
-        riceScore: `RICE: ${rice2}`,
-        riceFormula: "(2.025M Qtr Reach × 2.0 Impact × 80% Conf) / 1.5 PM × 100 = 216",
+        rice: "RICE 216",
+        riceFormula: "(2.025M Qtr × 2.0 Impact × 80% Conf) / 1.5 PM × 100",
         title: "Pre-Slot Reliability Badge & 1-Tap Self-Reschedule UX",
         targetCohort: "Evening (5–8 PM) & Weekend Peak Bookings (4.5M Annual → 2.025M Qtr Anchor Users)",
-        signalEvidence: `${p02Share}% raw (${analytics.slotCount}/${t} — directional)`,
-        liftRationale: "Surfacing live slot-fill confidence at checkout shifts ~22% of flexible users from congested evening slots (42.0% assumed baseline repeat) to high-fill morning slots, while T-90m 1-tap self-reschedule prevents cancellation churn (+4.5% / +7.0% / +9.5% relative lift on the 42.0% baseline).",
-        scenarios: {
-          low: "2.025M qtr users × 11.0% pain × (42.0% × +4.5% rel = +1.89 pp) = +4,210 repeat bookings (+0.09 pp overall 90d repeat)",
-          base: "2.025M qtr users × 12.5% pain × (42.0% × +7.0% rel = +2.94 pp) = +7,442 repeat bookings (+0.17 pp overall 90d repeat)",
-          high: "2.025M qtr users × 14.0% pain × (42.0% × +9.5% rel = +3.99 pp) = +11,312 repeat bookings (+0.25 pp overall 90d repeat)"
-        },
-        p0Rationale: "Ranked #1 by RICE (216) because slot roulette is the #1 iOS/Play Store blocker and pure checkout UX nudging requires zero partner dispatch or payout edits.",
-        mechanism: "Checkout slot-picker displays 'High Reliability Slot' vs. 'Peak Congestion' badges + proactive T-90m 1-tap self-reschedule drawer with zero cancellation fee."
+        signal: `${p02Share}% (${analytics.slotCount}/${t})`,
+        mechanism: "Checkout slot-picker displays 'High Reliability Slot' vs. 'Peak Congestion' badges + proactive T-90m 1-tap self-reschedule drawer with zero cancellation fee.",
+        low: "+4,210 bookings (+0.09 pp)",
+        base: "+7,442 bookings (+0.17 pp)",
+        high: "+11,312 bookings (+0.25 pp)",
+        rationale: "Ranked #1 by RICE (216) because slot roulette is the #1 App/Play Store blocker and pure checkout UX nudging requires zero partner dispatch or payout edits."
       },
       {
         rank: "P0-2",
-        riceScore: `RICE: ${rice1}`,
-        riceFormula: "(1.71M Qtr Reach × 2.0 Impact × 85% Conf) / 1.5 PM × 100 = 194",
+        rice: "RICE 194",
+        riceFormula: "(1.71M Qtr × 2.0 Impact × 85% Conf) / 1.5 PM × 100",
         title: "Interactive Pre-Job Scope Checklist & Benchmark Spare-Part Verifier",
         targetCohort: "AC & Appliance Repair, Deep Cleaning, Painting (3.8M Annual → 1.71M Qtr Anchor Users)",
-        signalEvidence: `${p01Share}% raw (${analytics.scopeAndPartCount}/${t} — directional)`,
-        liftRationale: "Eliminates surprise on-site gas/spare-part upsell shock and cleaning exclusion disputes. Recovering 15%–25% of quote-shock detractors yields +4.0% / +6.5% / +9.0% relative lift on the 42.0% assumed cohort repeat baseline.",
-        scenarios: {
-          low: "1.71M qtr users × 18.0% pain × (42.0% × +4.0% rel = +1.68 pp) = +5,171 repeat bookings (+0.11 pp overall 90d repeat)",
-          base: "1.71M qtr users × 22.6% pain × (42.0% × +6.5% rel = +2.73 pp) = +10,550 repeat bookings (+0.23 pp overall 90d repeat)",
-          high: "1.71M qtr users × 26.0% pain × (42.0% × +9.0% rel = +3.78 pp) = +16,806 repeat bookings (+0.37 pp overall 90d repeat)"
-        },
-        p0Rationale: "P0 because diagnostic & scope distrust drives the highest-AOV Non-Returner churn and operates purely on the customer transparency layer.",
-        mechanism: "Visual 'Included vs. Excluded' checklist at checkout + in-app Benchmark Spare-Part Rate Card requiring 1-tap customer digital sign-off before part replacement."
+        signal: `${p01Share}% (${analytics.scopeAndPartCount}/${t})`,
+        mechanism: "Visual 'Included vs. Excluded' checklist at checkout + in-app Benchmark Spare-Part Rate Card requiring 1-tap customer digital sign-off before part replacement.",
+        low: "+5,171 bookings (+0.11 pp)",
+        base: "+10,550 bookings (+0.23 pp)",
+        high: "+16,806 bookings (+0.37 pp)",
+        rationale: "P0 because diagnostic & scope distrust drives the highest-AOV Non-Returner churn and operates purely on the customer transparency layer."
       },
       {
         rank: "P1",
-        riceScore: `RICE: ${rice3}`,
-        riceFormula: "(2.34M Qtr Reach × 1.5 Impact × 75% Conf) / 2.0 PM × 100 = 132",
+        rice: "RICE 132",
+        riceFormula: "(2.34M Qtr × 1.5 Impact × 75% Conf) / 2.0 PM × 100",
         title: "Pre-Checkout Pro Credentials, 'My Trusted Pro' Re-Book & Digital Job Card",
         targetCohort: "Satisfied 1st-Timers in Salon, Cleaning & Handyman (5.2M Annual → 2.34M Qtr Anchor Users)",
-        signalEvidence: `${p1Share}% combined (${analytics.continuityAndSupportCount}/${t} — directional)`,
-        liftRationale: "Closing the off-app WhatsApp disintermediation leak and surfacing pro credentials pre-checkout converts satisfied single-visit customers into recurring 30–60d multi-category habit loops (+3.0% / +5.0% / +7.0% relative lift on 42.0% assumed baseline).",
-        scenarios: {
-          low: "2.34M qtr users × 15.0% eligible × (42.0% × +3.0% rel = +1.26 pp) = +4,423 repeat bookings (+0.10 pp overall 90d repeat)",
-          base: "2.34M qtr users × 18.0% eligible × (42.0% × +5.0% rel = +2.10 pp) = +8,845 repeat bookings (+0.20 pp overall 90d repeat)",
-          high: "2.34M qtr users × 22.0% eligible × (42.0% × +7.0% rel = +2.94 pp) = +15,135 repeat bookings (+0.34 pp overall 90d repeat)"
-        },
-        p0Rationale: "P1 (2.0 PM effort) because pro-preference matching requires slot-calendar UI integration and compounds retention once P0 slot and quote leaks are sealed.",
-        mechanism: "Shows pro rating, tenure & specialization before payment; enables 'Request Same Pro' on repeat bookings; issues a persistent Digital Job Card with 1-tap warranty claim."
-      }
-    ];
-  }, [analytics]);
-
-  const eightQuestions = useMemo(() => {
-    const t = analytics.total || 100;
-    const supportCount = analytics.themeRows.find((x) => x.name === "Post-Payment Support & Warranty Blackout")?.count || 0;
-    const sopCount = analytics.themeRows.find((x) => x.name === "Standardized SOP & Convenience Praise")?.count || 0;
-    const altT = analytics.altTotal || 24;
-
-    return [
-      {
-        q: "1. What do customers expect once a booking is complete?",
-        a: `Zero-friction closure and visible accountability: an itemized digital job card of tasks completed, spare parts replaced with warranty dates, and a 1-tap human redo pathway—not a post-payment bot blackout (${((supportCount / t) * 100).toFixed(1)}% [${supportCount}/${t} — directional] of corpus signals).`
-      },
-      {
-        q: "2. How do they decide a home service is needed, and when?",
-        a: "Three triggers: (a) Acute breakdowns (AC water leak, stove gas smell—decided in hours), (b) Cyclical milestones (pre-summer AC, Diwali/tenant-move cleaning, 30-day salon cycle), and (c) Unprompted dormant needs."
-      },
-      {
-        q: "3. Who or what do they turn to for the same or different service?",
-        a: `Among ${altT} records citing an explicit off-app alternative (directional): Local technicians & shops (${((analytics.altLocal / altT) * 100).toFixed(1)}% [${analytics.altLocal}/${altT}]), Competitor apps like NoBroker/YesMadam (${((analytics.altCompetitor / altT) * 100).toFixed(1)}% [${analytics.altCompetitor}/${altT}]), Brand-authorized centers (${((analytics.altBrand / altT) * 100).toFixed(1)}% [${analytics.altBrand}/${altT}]), Society WhatsApp vendors (${((analytics.altSociety / altT) * 100).toFixed(1)}% [${analytics.altSociety}/${altT}]), and Off-app direct UC pros (${((analytics.altOffAppPro / altT) * 100).toFixed(1)}% [${analytics.altOffAppPro}/${altT}]).`
-      },
-      {
-        q: "4. How do customers describe why they did or did not book again?",
-        a: `Explicit Non-Returners (${analytics.byRepeat["Non-Returner"]}/${t}) cite Diagnostic/Spare-Part Upsell Distrust, Last-Minute Slot Cancellations, and Post-Payment Support Blackouts. Explicit Returners (${analytics.byRepeat.Returner}/${t}) anchor on Standardized SOP Hygiene & Speed (${((sopCount / t) * 100).toFixed(1)}% [${sopCount}/${t} — directional] overall).`
-      },
-      {
-        q: "5. What do they do outside the app (locals, neighbours, WhatsApp)?",
-        a: "Gated-community families use society WhatsApp/MyGate groups to source pre-vetted plumbers/carpenters; cost-conscious households verify spare-part MRPs on Amazon/local shops before approving repairs."
-      },
-      {
-        q: "6. What separates customers who return from those who do not?",
-        a: `Returners (${((analytics.byRepeat.Returner / t) * 100).toFixed(1)}% [${analytics.byRepeat.Returner}/${t}]) anchor on standardized, fixed-scope SKUs (Salon, routine cleaning, morning 9 AM slots). Non-Returners (${((analytics.byRepeat["Non-Returner"] / t) * 100).toFixed(1)}% [${analytics.byRepeat["Non-Returner"]}/${t}]) enter via open-ended diagnostic repairs or evening peak slots. (${((analytics.byRepeat.Unknown / t) * 100).toFixed(1)}% [${analytics.byRepeat.Unknown}/${t}] are Unknown single-snapshot reviews.)`
-      },
-      {
-        q: "7. How do patterns differ by category, city, household & channel?",
-        a: `See the exact n-per-cell Q7 Cohort Matrix above: Salon & Cleaning skew heavily Returner (SOP praise), while AC/Appliance & Plumbing skew Non-Returner (spare-part distrust). Tier-1 metros dominate peer Reddit discussions; ${analytics.notDisclosedCityCount}/${t} records do not disclose city. Household type is stated in only part of the corpus (see matrix); first-discovery channel is not observable in public data.`
-      },
-      {
-        q: "8. What unmet needs emerge consistently across conversations?",
-        a: "(1) Pre-job visual scope & benchmark spare-part rate verification, (2) Real-time slot reliability & 1-tap self-reschedule protection, (3) Pre-checkout pro credentials & 'Re-book My Trusted Pro' in-app, and (4) Itemized digital job cards with 1-tap warranty."
+        signal: `${p1Share}% (${analytics.continuityAndSupportCount}/${t})`,
+        mechanism: "Shows pro rating, tenure & specialization before payment; enables 'Request Same Pro' on repeat bookings; issues a persistent Digital Job Card with 1-tap warranty claim.",
+        low: "+4,423 bookings (+0.10 pp)",
+        base: "+8,845 bookings (+0.20 pp)",
+        high: "+15,135 bookings (+0.34 pp)",
+        rationale: "P1 (2.0 PM effort) because pro-preference matching requires slot-calendar UI integration and compounds retention once P0 slot and quote leaks are sealed."
       }
     ];
   }, [analytics]);
 
   const filteredCorpus = useMemo(() => {
     return corpus.filter((item) => {
-      const catMatch = selectedCategory === "ALL" || item.category === selectedCategory;
-      const repMatch = selectedRepeatStatus === "ALL" || (item.repeat_status || "Unknown") === selectedRepeatStatus;
-      const srcMatch = selectedSource === "ALL" || item.source === selectedSource;
+      const tMatch = selectedThemeFilter === "ALL" || item.root_cause_theme === selectedThemeFilter;
+      const cMatch =
+        selectedCategoryFilter === "ALL" ||
+        (selectedCategoryFilter === "Multi & Painting"
+          ? item.category === "General Multi-Category" || item.category === "Painting & Home Improvement"
+          : item.category === selectedCategoryFilter);
+      const rMatch = selectedRepeatFilter === "ALL" || (item.repeat_status || "Unknown") === selectedRepeatFilter;
       const q = searchQuery.toLowerCase();
-      const textMatch =
+      const qMatch =
         !q ||
         (item.verbatim_quote || "").toLowerCase().includes(q) ||
         (item.raw_text || "").toLowerCase().includes(q) ||
-        (item.source || "").toLowerCase().includes(q) ||
         (item.city_segment || "").toLowerCase().includes(q) ||
-        (item.root_cause_theme || "").toLowerCase().includes(q);
-      return catMatch && repMatch && srcMatch && textMatch;
+        (item.source || "").toLowerCase().includes(q);
+      return tMatch && cMatch && rMatch && qMatch;
     });
-  }, [corpus, selectedCategory, selectedRepeatStatus, selectedSource, searchQuery]);
+  }, [corpus, selectedThemeFilter, selectedCategoryFilter, selectedRepeatFilter, searchQuery]);
+
+  const handleCellClick = (themeName, categoryLabel) => {
+    setSelectedThemeFilter(themeName);
+    setSelectedCategoryFilter(categoryLabel);
+    const el = document.getElementById("evidence-explorer");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const openDrawerWithPrompt = (promptText) => {
+    setTestInput(promptText);
+    setIsDrawerOpen(true);
+  };
 
   const runLiveExtractor = async () => {
     if (!testInput.trim()) return;
@@ -2588,7 +2542,7 @@ export default function App() {
       return;
     }
 
-    const prompt = `You are the Urban Company India Discovery Engine (Prompt v2.6-single-truth). Analyze this customer feedback:
+    const prompt = `You are the Urban Company India Discovery Engine (Prompt v2.6-single-truth). Analyze this customer feedback or question:
 "${testInput}"
 Return ONLY valid JSON with keys:
 - is_valid_india_core (boolean: false if outside India or about InstaHelp / 15-30 min instant maid)
@@ -2634,7 +2588,6 @@ Return ONLY valid JSON with keys:
             ...parsed
           };
           setCorpus((prev) => [newRecord, ...prev]);
-          setSelectedItem(newRecord);
         }
       } else {
         setExtractorResult({ error: data?.error?.message || "No response from Gemini API." });
@@ -2646,631 +2599,843 @@ Return ONLY valid JSON with keys:
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      <header className="border-b border-slate-200 bg-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-sm">
-            UC
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-bold text-base tracking-tight text-slate-900">
-                Urban Company AI Discovery Studio
-              </h1>
-              <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                India Core • Ex-InstaHelp
-              </span>
-              <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                Single Source of Truth (N = {analytics.total})
-              </span>
+    <div className="min-h-screen bg-[#F8F7F4] text-[#141518] font-sans selection:bg-indigo-100">
+      {/* Top Minimal Navigation Bar */}
+      <header className="sticky top-0 z-30 bg-[#F8F7F4]/95 backdrop-blur border-b border-stone-200/80">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="grid grid-cols-3 gap-0.5 w-5 h-5">
+              <span className="rounded-full bg-indigo-600" />
+              <span className="rounded-full bg-indigo-400" />
+              <span className="rounded-full bg-amber-500" />
+              <span className="rounded-full bg-indigo-600" />
+              <span className="rounded-full bg-indigo-600" />
+              <span className="rounded-full bg-stone-300" />
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              RHP Anchor: ~82–86% Repeat NTV Share • ~10.0M Annual ATUs (4.50M Qtr Anchor Cohort) • 42.0% Assumed Baseline 90d Repeat (35–50% Sens.)
-            </p>
+            <span className="font-bold text-base tracking-tight text-stone-900">
+              UC Discovery Engine
+            </span>
+            <span className="hidden sm:inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-stone-200/70 text-stone-700">
+              {datasetLabel}
+            </span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-xs transition cursor-pointer"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Upload verified_uc_corpus.json
-          </button>
+          <nav className="hidden md:flex items-center gap-6 text-sm text-stone-600 font-medium">
+            <a href="#how-it-works" className="hover:text-stone-950 transition">How it works</a>
+            <a href="#journey" className="hover:text-stone-950 transition">Cohort cuts</a>
+            <a href="#opportunities" className="hover:text-stone-950 transition">Opportunities</a>
+            <a href="#accuracy" className="hover:text-stone-950 transition">Accuracy</a>
+          </nav>
+
+          <div className="flex items-center gap-2.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 transition cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Load JSON
+            </button>
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-full bg-[#141518] hover:bg-stone-800 text-white shadow-sm transition cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Ask the engine
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="bg-slate-900 text-white px-5 py-2.5 flex items-center gap-2.5 text-xs">
-        <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
-        <span>
-          <strong className="text-amber-300">Headline Insight:</strong> Repeaters anchor on fixed-scope SKUs (Salon/Cleaning SOPs) and morning slots, whereas Non-Returners defect after evening slot cancellations and unverified spare-part/scope upsells—fixing checkout slot reliability and pre-job scope transparency can lift overall 90-day repeat by <strong>+0.47 pp deduplicated base</strong> (from 42.0% assumed baseline to 42.47%; +20,933 net repeat bookings/qtr) with zero discounts or partner payout changes.
-        </span>
-      </div>
-
-      <div className="bg-indigo-50/90 border-b border-indigo-100 px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 text-indigo-950 font-medium">
-          <Target className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span>
-            <strong>Target:</strong> <span className="text-indigo-700 font-bold">+0.47 pp</span> Deduplicated 90-Day Repeat Lift (<strong>42.0% assumed → 42.47%</strong>; +20,933 net repeat bookings/qtr across 4.50M quarterly anchor users)
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
-            Guardrail 1: Cancellations <strong>≤ +0.3 pp</strong>
-          </span>
-          <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
-            Guardrail 2: Support Tickets per booking <strong>no increase (≤ 0%)</strong>
-          </span>
-          <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
-            Guardrail 3: Net Pro Earnings/Hr <strong>≥ ₹0 (Neutral/Up)</strong>
-          </span>
-        </div>
-      </div>
-
-      <div className="bg-amber-50 border-b border-amber-200/80 px-5 py-1.5 flex items-center gap-2 text-[11px] text-amber-900">
-        <EyeOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-        <span>
-          <strong>Observability Boundary:</strong> Public reviews lack anchor booking timestamps; 90-day repeat is inferred strictly from explicit text markers (<strong>Returner</strong>, <strong>Non-Returner</strong>, <strong>Unknown</strong>). Silent churners remain unobservable in public corpora.
-        </span>
-      </div>
-
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-        <aside className="lg:col-span-3 border-r border-slate-200 bg-white p-4 space-y-4 overflow-y-auto">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-indigo-600" /> Live JSON Corpus (6 Sources)
+      {/* SECTION 1: HERO & KEY SUMMARY CARDS */}
+      <section className="max-w-6xl mx-auto px-6 pt-12 pb-16 space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          {/* Left Hero Copy + Interactive Prompt */}
+          <div className="lg:col-span-6 space-y-6">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-stone-500">
+              A DISCOVERY ENGINE • URBAN COMPANY INDIA • EX-INSTAHELP
             </div>
-            <div className="text-2xl font-extrabold text-slate-900">
-              {analytics.total} <span className="text-xs font-normal text-slate-500">verified IN records</span>
-            </div>
-            <div className="text-[11px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-2.5 py-1">
-              {datasetLabel}
-            </div>
-            <div className="pt-1 space-y-1">
-              {Object.entries(analytics.bySource).map(([src, cnt]) => (
-                <div key={src} className="flex justify-between text-xs text-slate-700">
-                  <span className="truncate pr-2">{src}</span>
-                  <span className="font-mono text-slate-500">
-                    {cnt}/{analytics.total} ({((cnt / analytics.total) * 100).toFixed(0)}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-stone-950 leading-[1.08]">
+              Why do 90-day repeats last, or quietly stop?
+            </h1>
+            <p className="text-base text-stone-600 leading-relaxed">
+              We audited {analytics.total} public Indian customer records across 6 channels, tagged each story to explicit repeat signals, and sized zero-discount UX fixes to lift 90-day repeat by <strong className="text-stone-900">+0.47 pp deduplicated base</strong> (42.0% assumed → 42.47%).
+            </p>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Repeat Observability Split
-            </div>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-emerald-700 font-medium">
-                <span>Returner (Explicit)</span>
-                <span className="font-mono">
-                  {analytics.byRepeat.Returner}/{analytics.total} ({((analytics.byRepeat.Returner / analytics.total) * 100).toFixed(1)}%)
-                </span>
-              </div>
-              <div className="flex justify-between text-rose-700 font-medium">
-                <span>Non-Returner (Explicit)</span>
-                <span className="font-mono">
-                  {analytics.byRepeat["Non-Returner"]}/{analytics.total} ({((analytics.byRepeat["Non-Returner"] / analytics.total) * 100).toFixed(1)}%)
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Unknown (Single Snapshot)</span>
-                <span className="font-mono">
-                  {analytics.byRepeat.Unknown}/{analytics.total} ({((analytics.byRepeat.Unknown / analytics.total) * 100).toFixed(1)}%)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-indigo-600" /> Slice Evidence
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-600 block mb-1">Repeat Status Label</label>
-              <select
-                value={selectedRepeatStatus}
-                onChange={(e) => setSelectedRepeatStatus(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-              >
-                <option value="ALL">All Repeat Labels ({analytics.total})</option>
-                <option value="Returner">Returner ({analytics.byRepeat.Returner})</option>
-                <option value="Non-Returner">Non-Returner ({analytics.byRepeat["Non-Returner"]})</option>
-                <option value="Unknown">Unknown ({analytics.byRepeat.Unknown})</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-600 block mb-1">Channel / Source</label>
-              <select
-                value={selectedSource}
-                onChange={(e) => setSelectedSource(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-              >
-                <option value="ALL">All 6 Channels</option>
-                {Object.keys(analytics.bySource).map((src) => (
-                  <option key={src} value={src}>{src}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-600 block mb-1">Core Service Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800"
-              >
-                <option value="ALL">All Core Categories</option>
-                <option value="AC & Appliance Repair">AC & Appliance Repair</option>
-                <option value="Salon & Spa">Salon & Spa</option>
-                <option value="Deep Cleaning & Pest Control">Deep Cleaning & Pest Control</option>
-                <option value="Plumbing, Electrical & Carpentry">Plumbing, Electrical & Carpentry</option>
-                <option value="Painting & Home Improvement">Painting & Home Improvement</option>
-                <option value="General Multi-Category">General Multi-Category</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-600" /> Scope & Constraints
-            </div>
-            <ul className="text-[11px] text-slate-700 space-y-1">
-              <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> India-Only • Ex-InstaHelp</li>
-              <li className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-rose-600" /> Zero discounts / coupons</li>
-              <li className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-rose-600" /> Zero pricing / pro payout edits</li>
-            </ul>
-          </div>
-        </aside>
-
-        <main className="lg:col-span-6 p-5 overflow-y-auto space-y-5">
-          <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-xl border border-slate-200 shadow-xs">
-            {[
-              { id: "opportunities", label: "1. RICE, Sizing & Test Plan", icon: Layers },
-              { id: "corpus", label: "2. N=100 Corpus & Themes", icon: BarChart3 },
-              { id: "questions", label: "3. 8-Q & Q7 Matrix (n/cell)", icon: MessageSquareQuote },
-              { id: "evidence", label: "4. Sensitivity, Audit & Rubric", icon: BookOpen }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    activeTab === tab.id
-                      ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {activeTab === "opportunities" && (
-            <div className="space-y-4">
-              <div className="bg-white border border-indigo-200 rounded-xl p-4 text-xs text-slate-700 space-y-2 shadow-xs">
-                <div className="font-bold text-slate-900 text-sm">
-                  Assumed Baseline Repeat Rate (35%–50% Sensitivity) & Deduplicated Quarterly Sizing
-                </div>
-                <p>
-                  <strong>Reach & Cadence Conversion:</strong> Urban Company RHP / Q2 FY27 Shareholder disclosures report ~10.0M India Annual Transacting Users (ATUs) and ~82–86% repeat NTV revenue share (not a user-level 90d repeat rate). Converting annual ATUs to quarterly active anchor cohorts (<strong>10.0M × 45% quarterly active assumption = 4.50M quarterly anchor users</strong>; ~1.50M/month) and modeling <strong>42.0% 90-day repeat as an explicit assumption</strong> yields 1.89M baseline quarterly repeaters.
-                </p>
-                <p className="text-[11px] text-slate-600">
-                  <strong>Assumptions (PM estimates, not company data):</strong> 45% quarterly-active factor, applied to the 10.0M total and to each segment (4.5M→2.025M, 3.8M→1.71M, 5.2M→2.34M; segment annual ATUs assumed at 45%, 38% and 52% of 10.0M and overlapping). Pain % is a proxy (theme share of public feedback, not true customer incidence). Lift % is relative to the 42.0% baseline (pp lift = 42.0% × relative lift) and has no public benchmark, so the A/B test validates it. The 0.78 overlap factor exists because segment reaches sum to 6.08M, above the 4.50M cohort.
-                </p>
-                <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 space-y-1 font-mono text-[11px]">
-                  <div className="text-slate-600">
-                    Naive Unadjusted Sum (42.0% baseline): +0.31 pp Low (+13,804) | +0.60 pp Base (+26,837) | +0.96 pp High (+43,253)
-                  </div>
-                  <div className="text-indigo-900 font-bold">
-                    Deduplicated Combined Range (×0.78 overlap assumption for 22% multi-pain user overlap): +0.24 pp Low (+10,767) | +0.47 pp Base (+20,933 → 42.47% repeat) | +0.75 pp High (+33,737)
-                  </div>
-                  <div className="text-slate-600 pt-1 border-t border-indigo-200/60">
-                    Baseline Repeat Sensitivity (Deduplicated Base Case): At 35.0% baseline → +0.39 pp (+17,444) | At 42.0% baseline → +0.47 pp (+20,933) | At 50.0% baseline → +0.55 pp (+24,920)
-                  </div>
-                </div>
-              </div>
-
-              {sizedOpportunities.map((opp, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-indigo-600 text-white">
-                        {opp.rank}
-                      </span>
-                      <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {opp.riceScore}
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-mono text-slate-500">{opp.riceFormula}</span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-900">{opp.title}</h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">{opp.mechanism}</p>
-                  <div className="text-[11px] text-slate-600">
-                    <strong>Target cohort:</strong> {opp.targetCohort}
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[11px]">
-                    <div className="font-semibold text-slate-800">
-                      Lift Rationale: <span className="font-normal text-slate-600">{opp.liftRationale}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-1 pt-1 font-mono">
-                      <div className="text-slate-600"><strong>LOW:</strong>  {opp.scenarios.low}</div>
-                      <div className="text-emerald-700 font-bold"><strong>BASE:</strong> {opp.scenarios.base}</div>
-                      <div className="text-indigo-700"><strong>HIGH:</strong> {opp.scenarios.high}</div>
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-slate-600 bg-amber-50/70 border border-amber-200/70 rounded-lg px-3 py-2">
-                    <strong className="text-amber-900">Sequencing ({opp.rank} Rationale):</strong> {opp.p0Rationale}
-                  </div>
-                </div>
-              ))}
-
-              <div className="bg-white border border-emerald-200 rounded-xl p-4 space-y-2.5 shadow-xs">
-                <div className="flex items-center gap-2 text-sm font-bold text-emerald-950">
-                  <FlaskConical className="w-4 h-4 text-emerald-600" /> Short Experimentation & Validation Plan (4-Week Rollout)
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px] text-slate-700">
-                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>1. Design & Unit:</strong> User-level 50/50 randomized A/B across Tier-1 metros: Control vs. Bundle arm (P0-1 Slot Reliability + P0-2 Scope & Benchmark Verifier + P1 Pro Credentials). Tested as a bundle because single-feature effects (+0.17 to +0.23 pp base) are below the detectable range; per-feature attribution uses 30-day leading metrics.
-                  </div>
-                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>2. Sample & Power:</strong> ~425k completed anchor bookings per arm (~850k total; ~6 weeks of enrolment, assuming Tier-1 metros ≈ 50% of ~1.5M monthly anchors) + 90-day observation. 80% power, α = 0.05, 42% baseline → minimum detectable effect ≈ +0.30 pp (expected bundle effect: +0.47 pp base, +0.24 pp low). Low-case effects are not detectable; flagged as a limitation.
-                  </div>
-                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>3. Primary & Leading Metrics:</strong> 90-day post-anchor repeat booking rate (Primary); 30-day repeat, checkout conversion, slot-reschedule rate & on-site quote approval rate (Leading).
-                  </div>
-                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2.5">
-                    <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.30 pp AND cancellations stay ≤ +0.3 pp, support tickets per booking show no increase, and net partner earnings/hr ≥ ₹0.
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-rose-200 rounded-xl p-4 space-y-3 shadow-xs">
-                <div className="flex items-center gap-2 text-sm font-bold text-rose-900">
-                  <Ban className="w-4 h-4 text-rose-600" /> Explicit "Not Building & Why" (PM Scope Judgment)
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {NOT_BUILDING.map((nb, i) => (
-                    <div key={i} className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-xs space-y-1">
-                      <div className="font-bold text-rose-950">{nb.idea}</div>
-                      <p className="text-slate-700 text-[11px] leading-relaxed">{nb.why}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "corpus" && (
-            <div className="space-y-4">
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Causal Theme Breakdown (Live Computed from CORPUS_100)
-                  </h2>
-                  <span className="text-xs font-mono text-slate-500">Directional N = {analytics.total}</span>
-                </div>
-                <div className="space-y-2.5">
-                  {analytics.themeRows.map((t) => (
-                    <div key={t.name} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-800 font-medium">{t.name}</span>
-                        <span className="font-mono text-indigo-700 font-semibold">
-                          {t.rawPct}% ({t.count}/{analytics.total} — directional)
-                        </span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-600 rounded-full"
-                          style={{ width: `${Math.min(100, Number(t.rawPct) * 2)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            {/* Clean Search / Ask Input Box */}
+            <div className="bg-white border border-stone-200 rounded-2xl p-3 shadow-xs space-y-2.5">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search quotes, cities (Bengaluru, Pune, Mumbai, Hyderabad), sources, or themes..."
-                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 shadow-2xs"
+                  value={heroQuestion}
+                  onChange={(e) => setHeroQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && openDrawerWithPrompt(heroQuestion)}
+                  placeholder="Paste a review or ask about repeat blockers..."
+                  className="flex-1 text-sm px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-indigo-500"
                 />
+                <button
+                  onClick={() => openDrawerWithPrompt(heroQuestion || SUGGESTED_PROMPTS[0])}
+                  className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition cursor-pointer"
+                  title="Run in Live Engine"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-
-              <div className="space-y-2.5">
-                {filteredCorpus.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className={`p-3.5 rounded-xl border transition cursor-pointer ${
-                      selectedItem?.id === item.id
-                        ? "bg-indigo-50/70 border-indigo-400 shadow-xs"
-                        : "bg-white border-slate-200 hover:border-slate-300"
-                    }`}
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_PROMPTS.map((sp, i) => (
+                  <button
+                    key={i}
+                    onClick={() => openDrawerWithPrompt(sp)}
+                    className="text-left text-xs px-3 py-1.5 rounded-full border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 transition cursor-pointer"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                          {item.source}
-                        </span>
-                        <span className="text-[11px] font-medium text-indigo-700">{item.category}</span>
-                        <span className="text-[10px] text-slate-500">• {item.city_segment}</span>
-                      </div>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                          item.repeat_status === "Returner"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : item.repeat_status === "Non-Returner"
-                            ? "bg-rose-50 text-rose-700 border-rose-200"
-                            : "bg-slate-100 text-slate-600 border-slate-200"
-                        }`}
-                      >
-                        {item.repeat_status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-800 italic">"{item.verbatim_quote || item.raw_text}"</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">
-                        {item.root_cause_theme}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400">Anon ID: {item.author_id}</span>
-                      {item.alternative_mentioned && item.alternative_mentioned !== "None" && (
-                        <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                          Leakage: {item.alternative_mentioned}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    {sp}
+                  </button>
                 ))}
               </div>
             </div>
-          )}
-
-          {activeTab === "questions" && (
-            <div className="space-y-4">
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700">
-                    Q7 Cohort & Segment Matrix (Exact n per Cell • N = {analytics.total})
-                  </h3>
-                  <span className="text-[11px] font-mono text-slate-500">Live Computed</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                        <th className="py-2 px-2">Cohort / Cut Dimension</th>
-                        <th className="py-2 px-2 font-mono">Total (n)</th>
-                        <th className="py-2 px-2 font-mono text-emerald-700">Returner (n)</th>
-                        <th className="py-2 px-2 font-mono text-rose-700">Non-Returner (n)</th>
-                        <th className="py-2 px-2 font-mono text-slate-500">Unknown (n)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {analytics.q7Matrix.map((row, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1.5 px-2 font-medium text-slate-800">{row.label}</td>
-                          <td className="py-1.5 px-2 font-mono font-bold text-slate-900">n = {row.total}</td>
-                          <td className="py-1.5 px-2 font-mono text-emerald-700">
-                            n = {row.ret} ({row.total ? ((row.ret / row.total) * 100).toFixed(0) : 0}%)
-                          </td>
-                          <td className="py-1.5 px-2 font-mono text-rose-700">
-                            n = {row.nonRet} ({row.total ? ((row.nonRet / row.total) * 100).toFixed(0) : 0}%)
-                          </td>
-                          <td className="py-1.5 px-2 font-mono text-slate-500">
-                            n = {row.unk} ({row.total ? ((row.unk / row.total) * 100).toFixed(0) : 0}%)
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-0.5">
-                  <div><strong>Reading note:</strong> Directional correlation only. People who disclose a city or household are often longer-term, more engaged users, so "Not Disclosed" gaps may reflect posting habits, not true city or household effects.</div>
-                  <div><strong>Channel</strong> rows show where a review was posted, not how the customer first discovered Urban Company (not observable in public data).</div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {eightQuestions.map((item, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-4 space-y-1.5 shadow-xs">
-                    <h3 className="text-xs font-bold text-indigo-700">{item.q}</h3>
-                    <p className="text-xs text-slate-700 leading-relaxed">{item.a}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "evidence" && (
-            <div className="space-y-4 text-xs text-slate-700">
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <Scale className="w-4 h-4 text-indigo-600" /> 1. Live Weighting Sensitivity Table (100% Synced with Corpus)
-                </h3>
-                <p className="text-[11px] text-slate-600">
-                  Computed directly from <code>CORPUS_100</code> comparing <strong>Raw Sample (n/N)</strong> vs. <strong>Equal Channel Weights (25% × 4 source groups)</strong> vs. <strong>Stratified Behavioral Weights</strong> (35% App Stores, 25% Peer Reddit, 20% Trustpilot/Forums, 20% Social/Video).
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-500 bg-slate-50">
-                        <th className="py-2 px-2">Theme</th>
-                        <th className="py-2 px-2">Raw (n/N)</th>
-                        <th className="py-2 px-2">Raw %</th>
-                        <th className="py-2 px-2">Equal Wt</th>
-                        <th className="py-2 px-2 text-indigo-700">Stratified Wt</th>
-                        <th className="py-2 px-2">Sensitivity Range</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {analytics.themeRows.map((row, i) => (
-                        <tr key={i}>
-                          <td className="py-2 px-2 font-semibold text-slate-900">{row.name}</td>
-                          <td className="py-2 px-2 font-mono">{row.count}/{analytics.total}</td>
-                          <td className="py-2 px-2 font-mono">{row.rawPct}%</td>
-                          <td className="py-2 px-2 font-mono">{row.equalPct}%</td>
-                          <td className="py-2 px-2 font-mono font-bold text-indigo-700">{row.stratPct}%</td>
-                          <td className="py-2 px-2 font-mono text-slate-600">{row.spread}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-indigo-600" /> 2. Deterministic Labeling Rubric (Explicit Signals First, Inference Flagged)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
-                  {LABELING_RUBRIC.map((lr, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-0.5">
-                      <div className="font-bold text-indigo-800 font-mono">{lr.field}</div>
-                      <div className="text-slate-700">{lr.rule}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-600" /> 3. 32-Record Human Audit & Exact Substring Verification
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5 text-[11px] font-mono">
-                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      Human Audit: 29/32 (90.6%)
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-                      Exact Substring: {analytics.exactSubstringMatches}/{analytics.total} ({((analytics.exactSubstringMatches / analytics.total) * 100).toFixed(1)}%)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-700 flex flex-wrap gap-4">
-                  <span><strong>Model:</strong> gemini-3.8-flash</span>
-                  <span><strong>Prompt:</strong> prompt-v2.6-single-truth</span>
-                  <span><strong>Audit Scope:</strong> 12 Base + 20 New Records (044–100)</span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-500 bg-slate-50">
-                        <th className="py-1.5 px-2">Theme Cluster</th>
-                        <th className="py-1.5 px-2">Audited (n)</th>
-                        <th className="py-1.5 px-2">Exact Match</th>
-                        <th className="py-1.5 px-2">Per-Theme Accuracy</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {PER_THEME_VALIDATION.map((pt, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1.5 px-2 font-medium text-slate-800">{pt.theme}</td>
-                          <td className="py-1.5 px-2 font-mono">{pt.audited}</td>
-                          <td className="py-1.5 px-2 font-mono">{pt.exact}</td>
-                          <td className="py-1.5 px-2 font-mono text-slate-600">{pt.precision}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-slate-800">3 Discrepancies Caught & Fixed During 32-Record Audit:</div>
-                  {HUMAN_VALIDATION_LOG.map((v, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px]">
-                      <span className="font-bold text-indigo-700">{v.recordId} ({v.issue}):</span>{" "}
-                      <span className="line-through text-rose-600">{v.before}</span> →{" "}
-                      <span className="text-emerald-700 font-semibold">{v.after}</span> — {v.rationale}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900">
-                  <strong>Audit sampling:</strong> 12 base + 20 new records (044–100), hand-picked across channels (not random); single reviewer, no second rater. Membership Parity and Other Friction themes were outside the 32-record sample.
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-600" /> 4. Methods & Limitations
-                </h3>
-                <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-700">
-                  <li><strong>Sampling:</strong> purposive, hand-curated public records across 6 channels (Aug 2025–Nov 2026), not a random sample. N = 100 is directional.</li>
-                  <li><strong>Observability:</strong> no anchor-booking timestamps. Repeat labels come from text signals only, and Non-Returner includes inferred cases (upper bound).</li>
-                  <li><strong>Silent churn:</strong> invisible in public data and not corrected. The 42% baseline is an assumption (35–50% sensitivity).</li>
-                  <li><strong>Reweighting:</strong> channel weights are assumptions, shown as a sensitivity range, not a correction.</li>
-                  <li><strong>Language:</strong> Hinglish text is analysed as-is and was not validated separately.</li>
-                  <li><strong>Sizing:</strong> pain %, lift % and overlap are PM assumptions, to be validated by the A/B test.</li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </main>
-
-        <aside className="lg:col-span-3 border-l border-slate-200 bg-white p-4 space-y-4 overflow-y-auto">
-          <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-3.5 space-y-2.5">
-            <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Live AI Gatekeeper & Tagger
-            </div>
-            <p className="text-[11px] text-slate-600">
-              Test live scope filtering & causal extraction (<code>gemini-3.8-flash</code> / <code>prompt-v2.6-single-truth</code>):
-            </p>
-            <textarea
-              rows={3}
-              value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
-              placeholder="e.g., Booked UC salon in Pune 3 times, wish I could see the beautician's profile and pick her again before paying..."
-              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-900 placeholder-slate-400"
-            />
-            <button
-              onClick={runLiveExtractor}
-              disabled={isExtracting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-lg shadow-xs transition cursor-pointer"
-            >
-              {isExtracting ? "Running Gemini Gatekeeper..." : "Run Live Causal Extraction"}
-            </button>
-
-            {extractorResult && (
-              <pre className="bg-slate-900 text-emerald-300 rounded-lg p-2.5 text-[10px] overflow-x-auto max-h-48">
-                {JSON.stringify(extractorResult, null, 2)}
-              </pre>
-            )}
           </div>
 
-          {selectedItem && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <FileJson className="w-3.5 h-3.5 text-indigo-600" /> Structured Record Inspector
-              </div>
-              <pre className="bg-white border border-slate-200 rounded-lg p-2.5 text-[10px] text-slate-800 overflow-x-auto max-h-80">
-                {JSON.stringify(selectedItem, null, 2)}
-              </pre>
+          {/* Right Hero Card: Repeat Signal Split & Guardrails */}
+          <div className="lg:col-span-6 bg-white border border-stone-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-sm text-stone-900">Corpus repeat observability split</span>
+              <span className="text-xs font-mono text-stone-400">share of N = {analytics.total}</span>
             </div>
-          )}
-        </aside>
-      </div>
+
+            {/* 10 Dot Visual Indicator */}
+            <div className="flex items-center gap-2">
+              {[...Array(10)].map((_, idx) => {
+                const isRet = idx < 4;
+                const isNonRet = idx >= 4 && idx < 8;
+                return (
+                  <span
+                    key={idx}
+                    className={`h-6 w-6 rounded-full border-2 ${
+                      isRet
+                        ? "bg-indigo-600 border-indigo-600"
+                        : isNonRet
+                        ? "bg-white border-amber-600"
+                        : "bg-stone-200 border-stone-200"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 pt-2 border-t border-stone-200">
+              <div>
+                <div className="text-2xl font-extrabold font-mono text-indigo-600">
+                  {((analytics.byRepeat.Returner / analytics.total) * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs font-semibold text-stone-800 mt-0.5">Returners</div>
+                <div className="text-[11px] font-mono text-stone-500">
+                  {analytics.byRepeat.Returner} of {analytics.total}
+                </div>
+              </div>
+              <div className="border-t-2 border-amber-600 -mt-[9px] pt-[7px]">
+                <div className="text-2xl font-extrabold font-mono text-amber-700">
+                  {((analytics.byRepeat["Non-Returner"] / analytics.total) * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs font-semibold text-stone-800 mt-0.5">Non-Returners</div>
+                <div className="text-[11px] font-mono text-stone-500">
+                  {analytics.byRepeat["Non-Returner"]} of {analytics.total} (upper bound)
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold font-mono text-stone-600">
+                  {((analytics.byRepeat.Unknown / analytics.total) * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs font-semibold text-stone-800 mt-0.5">Unknown</div>
+                <div className="text-[11px] font-mono text-stone-500">
+                  {analytics.byRepeat.Unknown} of {analytics.total}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-stone-500 leading-relaxed">
+              Public reviews lack anchor-booking timestamps; 90-day repeat is inferred from explicit text signals only. People who quietly stop rarely post, so silent churn is invisible here.
+            </p>
+
+            {/* Target & 3 Hard Guardrails */}
+            <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-stone-900">North Star Target: +0.47 pp 90d Repeat</span>
+                <span className="font-mono text-indigo-700 font-semibold">+20,933 bookings / qtr</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 text-[11px] font-mono text-stone-600">
+                <span className="px-2 py-0.5 bg-white border border-stone-200 rounded">Cancellations ≤ +0.3 pp</span>
+                <span className="px-2 py-0.5 bg-white border border-stone-200 rounded">Tickets/booking ≤ 0%</span>
+                <span className="px-2 py-0.5 bg-white border border-stone-200 rounded">Pro earnings/hr ≥ ₹0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Clean Insight Cards (Matching Screenshot 2) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 flex flex-col justify-between space-y-5 shadow-2xs">
+            <div className="space-y-3">
+              <div className="text-xs font-semibold text-amber-700">
+                What triggers Non-Returner defection?
+              </div>
+              <p className="text-lg font-bold text-stone-900 leading-snug">
+                Spare-part upsell distrust (15 of 100, 15%) and evening slot cancellations (14 of 100, 14%) are the #1 and #2 repeat blockers.
+              </p>
+            </div>
+            <button
+              onClick={() => handleCellClick("Diagnostic & Spare-Part Upsell Distrust", "ALL")}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              Read these quotes →
+            </button>
+          </div>
+
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 flex flex-col justify-between space-y-5 shadow-2xs">
+            <div className="space-y-3">
+              <div className="text-xs font-semibold text-indigo-600">
+                What separates Returners from Non-Returners?
+              </div>
+              <p className="text-lg font-bold text-stone-900 leading-snug">
+                Returners anchor on fixed-scope Salon & Cleaning SOPs (31 of 100, 31%) and morning slots; Non-Returners hit open-ended repair quotes.
+              </p>
+            </div>
+            <button
+              onClick={() => handleCellClick("Standardized SOP & Convenience Praise", "ALL")}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              Read these quotes →
+            </button>
+          </div>
+
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 flex flex-col justify-between space-y-5 shadow-2xs">
+            <div className="space-y-3">
+              <div className="text-xs font-semibold text-indigo-600">
+                What unmet needs can UC act on within rules?
+              </div>
+              <p className="text-lg font-bold text-stone-900 leading-snug">
+                Pre-slot reliability badges, pre-job scope & part rate cards, and pre-checkout pro credentials—zero discounts or payout edits.
+              </p>
+            </div>
+            <a
+              href="#opportunities"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+            >
+              See RICE & sizing →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: DARK CONTRAST BAND — HOW THE ENGINE WORKS (Matching Screenshot 3) */}
+      <section id="how-it-works" className="bg-[#141518] text-white py-16">
+        <div className="max-w-6xl mx-auto px-6 space-y-10">
+          <div className="space-y-3 max-w-3xl">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-stone-400">
+              HOW THE ENGINE WORKS
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              From 6 Indian public channels to {analytics.total} verified core records, each audited against verbatim text
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 pt-4 border-t border-stone-800">
+            <div className="space-y-2">
+              <div className="text-3xl font-extrabold font-mono text-white">6</div>
+              <div className="text-xs font-bold text-stone-200">Public channels</div>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Purposive sample (Aug 2025–Nov 2026) across India communities.
+              </p>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {["Play Store", "App Store", "Reddit", "Trustpilot", "Forums", "YouTube/X"].map((tag) => (
+                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-stone-800 text-stone-300">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 md:border-l md:border-stone-800 md:pl-6">
+              <div className="text-3xl font-extrabold font-mono text-white">{analytics.total}</div>
+              <div className="text-xs font-bold text-stone-200">India Core (Ex-InstaHelp)</div>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Filtered strictly to Indian home services; 15-min InstaHelp maid stripped.
+              </p>
+            </div>
+
+            <div className="space-y-2 md:border-l md:border-stone-800 md:pl-6">
+              <div className="text-3xl font-extrabold font-mono text-indigo-400">12</div>
+              <div className="text-xs font-bold text-stone-200">Structured fields each</div>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Theme, category, repeat signal, city tier, household, alternative & quote.
+              </p>
+            </div>
+
+            <div className="space-y-2 md:border-l md:border-stone-800 md:pl-6">
+              <div className="text-3xl font-extrabold font-mono text-emerald-400">29 / 32</div>
+              <div className="text-xs font-bold text-stone-200">Human audit (90.6%)</div>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                12 base + 20 new records audited; 3 tagging errors caught & fixed.
+              </p>
+            </div>
+
+            <div className="space-y-2 md:border-l md:border-stone-800 md:pl-6">
+              <div className="text-3xl font-extrabold font-mono text-amber-400">
+                {analytics.exactSubstringMatches} / {analytics.total}
+              </div>
+              <div className="text-xs font-bold text-stone-200">Verbatim substring match</div>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Every quote checked programmatically against its source review text.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 3: INTERACTIVE HEATMAP MATRIX (Matching Screenshot 5 & 6) */}
+      <section id="opportunities" className="max-w-6xl mx-auto px-6 py-16 space-y-8">
+        <div className="space-y-2 max-w-3xl">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-indigo-600 font-semibold">
+            OPPORTUNITY AREAS • ROOT CAUSE × CATEGORY MATRIX
+          </div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-stone-950">
+            Click any cell to inspect the verbatim customer quotes behind it
+          </h2>
+          <p className="text-sm text-stone-600">
+            Each cell counts directional records (N = {analytics.total}). Residual themes (<em>Membership Parity</em> & <em>Other Friction</em>) are greyed out where scope constraints limit direct product action.
+          </p>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-50/80 text-stone-500 font-mono text-[11px]">
+                  <th className="py-3.5 px-4 font-semibold">Root-Cause Theme</th>
+                  <th className="py-3.5 px-3 text-center">Salon & Spa</th>
+                  <th className="py-3.5 px-3 text-center">AC & Appliance</th>
+                  <th className="py-3.5 px-3 text-center">Deep Clean</th>
+                  <th className="py-3.5 px-3 text-center">Plumb / Elec</th>
+                  <th className="py-3.5 px-3 text-center">Multi / Paint</th>
+                  <th className="py-3.5 px-3 text-center">Total (n/N)</th>
+                  <th className="py-3.5 px-4 text-center">Within rules?</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {analytics.themeRows.map((row) => {
+                  const isMuted = row.withinRules === "Partly";
+                  const cellClass = (val) => {
+                    if (!val) return "text-stone-300";
+                    if (isMuted) return "bg-stone-100 text-stone-600 font-mono font-semibold rounded-lg";
+                    if (val >= 10) return "bg-indigo-600 text-white font-mono font-bold rounded-lg";
+                    if (val >= 4) return "bg-indigo-100 text-indigo-900 font-mono font-semibold rounded-lg";
+                    return "bg-indigo-50/70 text-indigo-800 font-mono rounded-lg";
+                  };
+
+                  return (
+                    <tr key={row.name} className="hover:bg-stone-50/60 transition">
+                      <td className={`py-3 px-4 font-semibold ${isMuted ? "text-stone-400" : "text-stone-900"}`}>
+                        {row.name}
+                      </td>
+                      {[
+                        { val: row.cells.salon, cat: "Salon & Spa" },
+                        { val: row.cells.appliance, cat: "AC & Appliance Repair" },
+                        { val: row.cells.cleaning, cat: "Deep Cleaning & Pest Control" },
+                        { val: row.cells.handyman, cat: "Plumbing, Electrical & Carpentry" },
+                        { val: row.cells.multiPaint, cat: "Multi & Painting" }
+                      ].map((c, idx) => (
+                        <td key={idx} className="py-2 px-2 text-center">
+                          <button
+                            disabled={!c.val}
+                            onClick={() => handleCellClick(row.name, c.cat)}
+                            className={`w-12 py-1.5 inline-block transition ${cellClass(c.val)} ${
+                              c.val ? "hover:ring-2 hover:ring-indigo-400 cursor-pointer" : ""
+                            }`}
+                          >
+                            {c.val || "·"}
+                          </button>
+                        </td>
+                      ))}
+                      <td className="py-3 px-3 text-center font-mono font-bold text-stone-800">
+                        {row.count} ({row.rawPct}%)
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                            row.withinRules === "Driver"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : row.withinRules === "Yes"
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "bg-amber-50 text-amber-800"
+                          }`}
+                        >
+                          {row.withinRules}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* RICE Prioritization, Defensible Sizing & Experimentation */}
+        <div className="space-y-6 pt-6">
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 space-y-3 shadow-2xs">
+            <h3 className="text-base font-bold text-stone-900">
+              Defensible Opportunity Sizing (Low / Base / High + 35%–50% Baseline Sensitivity)
+            </h3>
+            <p className="text-xs text-stone-600 leading-relaxed">
+              <strong>Reach & Cadence Conversion:</strong> Urban Company RHP / Q2 FY27 Shareholder disclosures report ~10.0M India Annual Transacting Users (ATUs) and ~82–86% repeat NTV revenue share (not a user-level 90d repeat rate). Converting annual ATUs to quarterly active anchor cohorts (<strong>10.0M × 45% quarterly active assumption = 4.50M quarterly anchor users</strong>; ~1.50M/month) and modeling <strong>42.0% 90-day repeat as an explicit assumption</strong> yields 1.89M baseline quarterly repeaters.
+            </p>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              <strong>Assumptions (PM estimates, not company data):</strong> 45% quarterly-active factor applied to the 10.0M total and each segment (4.5M→2.025M, 3.8M→1.71M, 5.2M→2.34M; segment annual ATUs assumed at 45%, 38% and 52% of 10.0M and overlapping). Pain % is a proxy (theme share of public feedback, not true customer incidence). Lift % is relative to the 42.0% baseline (pp lift = 42.0% × relative lift) and has no public benchmark, so the A/B test validates it. The 0.78 overlap factor exists because segment reaches sum to 6.08M, above the 4.50M cohort.
+            </p>
+            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 font-mono text-xs space-y-1.5">
+              <div className="text-stone-600">
+                Naive Unadjusted Sum (42.0% baseline): +0.31 pp Low (+13,804) | +0.60 pp Base (+26,837) | +0.96 pp High (+43,253)
+              </div>
+              <div className="text-indigo-700 font-bold">
+                Deduplicated Combined Range (×0.78 overlap assumption): +0.24 pp Low (+10,767) | +0.47 pp Base (+20,933 → 42.47% repeat) | +0.75 pp High (+33,737)
+              </div>
+              <div className="text-stone-600 pt-1.5 border-t border-stone-200">
+                Baseline Sensitivity (Deduplicated Base): At 35.0% baseline → +0.39 pp (+17,444) | At 42.0% → +0.47 pp (+20,933) | At 50.0% → +0.55 pp (+24,920)
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {sizedOpportunities.map((opp) => (
+              <div key={opp.rank} className="bg-white border border-stone-200 rounded-3xl p-6 flex flex-col justify-between space-y-4 shadow-2xs">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-600 text-white">
+                      {opp.rank}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-indigo-700">{opp.rice}</span>
+                  </div>
+                  <h4 className="text-base font-bold text-stone-900 leading-snug">{opp.title}</h4>
+                  <p className="text-xs text-stone-600 leading-relaxed">{opp.mechanism}</p>
+                  <div className="text-[11px] text-stone-500">
+                    <strong className="text-stone-700">Target cohort:</strong> {opp.targetCohort}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-stone-100 text-[11px] font-mono">
+                  <div className="flex justify-between text-stone-500"><span>Low:</span><span>{opp.low}</span></div>
+                  <div className="flex justify-between text-emerald-700 font-bold"><span>Base:</span><span>{opp.base}</span></div>
+                  <div className="flex justify-between text-indigo-700"><span>High:</span><span>{opp.high}</span></div>
+                  <div className="pt-1 font-sans text-stone-500 leading-normal">{opp.rationale}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 4-Week Bundle A/B Test Plan + Not Building */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-7 bg-white border border-stone-200 rounded-3xl p-6 space-y-3 shadow-2xs">
+              <div className="text-xs font-mono uppercase tracking-wider text-emerald-700 font-bold">
+                EXPERIMENTATION PLAN • BUNDLE A/B TEST
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-stone-700">
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5">
+                  <strong>1. Design & Unit:</strong> User-level 50/50 randomized A/B across Tier-1 metros: Control vs. Bundle arm (P0-1 + P0-2 + P1). Tested as a bundle because single-feature effects (+0.17 to +0.23 pp base) sit below MDE; per-feature attribution uses 30d leading metrics.
+                </div>
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5">
+                  <strong>2. Sample & Power:</strong> ~425k completed anchor bookings per arm (~850k total; ~6 weeks enrolment at ~50% Tier-1 share of ~1.5M monthly anchors) + 90d window. 80% power, α = 0.05, 42% baseline → MDE ≈ +0.30 pp (+0.47 pp base; low case flagged undetectable).
+                </div>
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5">
+                  <strong>3. Primary & Leading:</strong> 90-day post-anchor repeat booking rate (Primary); 30-day repeat, checkout conversion, slot-reschedule rate & on-site quote approval rate (Leading).
+                </div>
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5">
+                  <strong>4. Ship / Kill Guardrails:</strong> Ship if 90d repeat lifts ≥ +0.30 pp AND cancellations ≤ +0.3 pp, support tickets per booking show no increase, and net partner earnings/hr ≥ ₹0.
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 bg-white border border-stone-200 rounded-3xl p-6 space-y-3 shadow-2xs">
+              <div className="text-xs font-mono uppercase tracking-wider text-rose-700 font-bold">
+                NOT BUILDING & WHY (SCOPE JUDGMENT)
+              </div>
+              <div className="space-y-2.5">
+                {NOT_BUILDING.map((nb, i) => (
+                  <div key={i} className="bg-rose-50/50 border border-rose-100 rounded-2xl p-3 text-xs">
+                    <div className="font-bold text-stone-900">{nb.idea}</div>
+                    <div className="text-stone-600 text-[11px] mt-0.5">{nb.why}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 4: Q7 COHORT & SEGMENT MATRIX */}
+      <section id="journey" className="max-w-6xl mx-auto px-6 py-12 space-y-6">
+        <div className="space-y-2">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-amber-700 font-semibold">
+            COHORT & SEGMENT CUTS • Q6 & Q7
+          </div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-stone-950">
+            Repeat signals across city tiers, households, categories & channels
+          </h2>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-50 text-stone-500 font-mono text-[11px]">
+                  <th className="py-3 px-4">Cohort / Cut Dimension</th>
+                  <th className="py-3 px-3">Total (n)</th>
+                  <th className="py-3 px-3 text-indigo-700">Returner (n)</th>
+                  <th className="py-3 px-3 text-amber-700">Non-Returner (n)</th>
+                  <th className="py-3 px-3 text-stone-500">Unknown (n)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {analytics.q7Matrix.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-stone-50/70">
+                    <td className="py-2.5 px-4 font-medium text-stone-900">{row.label}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-stone-900">n = {row.total}</td>
+                    <td className="py-2.5 px-3 font-mono text-indigo-700">
+                      n = {row.ret} ({row.total ? ((row.ret / row.total) * 100).toFixed(0) : 0}%)
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-amber-700">
+                      n = {row.nonRet} ({row.total ? ((row.nonRet / row.total) * 100).toFixed(0) : 0}%)
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-stone-500">
+                      n = {row.unk} ({row.total ? ((row.unk / row.total) * 100).toFixed(0) : 0}%)
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 bg-stone-50 border-t border-stone-200 text-xs text-stone-600 space-y-1">
+            <div>
+              <strong>Reading note:</strong> Directional correlation only. People who disclose a city or household are often longer-term, more engaged users, so "Not Disclosed" gaps may reflect posting habits, not true city or household effects.
+            </div>
+            <div>
+              <strong>Channel</strong> rows show where a review was posted, not how the customer first discovered Urban Company (not observable in public data).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 5: INTERACTIVE EVIDENCE EXPLORER */}
+      <section id="evidence-explorer" className="max-w-6xl mx-auto px-6 py-12 space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-1">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-indigo-600 font-semibold">
+              VERBATIM EVIDENCE LOG ({filteredCorpus.length} OF {analytics.total} RECORDS)
+            </div>
+            <h2 className="text-2xl font-extrabold tracking-tight text-stone-950">
+              Every headline number traces back to verbatim customer text
+            </h2>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedThemeFilter}
+              onChange={(e) => setSelectedThemeFilter(e.target.value)}
+              className="text-xs bg-white border border-stone-300 rounded-full px-3.5 py-2 text-stone-800"
+            >
+              <option value="ALL">All Themes ({analytics.total})</option>
+              {analytics.themeRows.map((t) => (
+                <option key={t.name} value={t.name}>{t.name} ({t.count})</option>
+              ))}
+            </select>
+            <select
+              value={selectedRepeatFilter}
+              onChange={(e) => setSelectedRepeatFilter(e.target.value)}
+              className="text-xs bg-white border border-stone-300 rounded-full px-3.5 py-2 text-stone-800"
+            >
+              <option value="ALL">All Repeat Labels</option>
+              <option value="Returner">Returner ({analytics.byRepeat.Returner})</option>
+              <option value="Non-Returner">Non-Returner ({analytics.byRepeat["Non-Returner"]})</option>
+              <option value="Unknown">Unknown ({analytics.byRepeat.Unknown})</option>
+            </select>
+            {(selectedThemeFilter !== "ALL" || selectedCategoryFilter !== "ALL" || selectedRepeatFilter !== "ALL" || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedThemeFilter("ALL");
+                  setSelectedCategoryFilter("ALL");
+                  setSelectedRepeatFilter("ALL");
+                  setSearchQuery("");
+                }}
+                className="text-xs font-semibold text-rose-600 hover:underline px-2 cursor-pointer"
+              >
+                Reset filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="relative">
+          <Search className="w-4 h-4 text-stone-400 absolute left-4 top-3" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search quotes, cities (Bengaluru, Pune, Mumbai, Hyderabad), or sources..."
+            className="w-full bg-white border border-stone-200 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 shadow-2xs"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredCorpus.slice(0, 24).map((item) => (
+            <div
+              key={item.id}
+              onClick={() => setSelectedRecord(item)}
+              className="bg-white border border-stone-200 hover:border-indigo-400 rounded-2xl p-5 space-y-3 transition cursor-pointer shadow-2xs"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-stone-900">{item.source}</span>
+                  <span className="text-stone-400">•</span>
+                  <span className="text-stone-500">{item.city_segment}</span>
+                </div>
+                <span
+                  className={`text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full ${
+                    item.repeat_status === "Returner"
+                      ? "bg-indigo-50 text-indigo-700"
+                      : item.repeat_status === "Non-Returner"
+                      ? "bg-amber-50 text-amber-800"
+                      : "bg-stone-100 text-stone-600"
+                  }`}
+                >
+                  {item.repeat_status}
+                </span>
+              </div>
+              <p className="text-sm text-stone-800 italic leading-relaxed">
+                "{item.verbatim_quote || item.raw_text}"
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1">
+                <span className="font-medium text-indigo-700">{item.root_cause_theme}</span>
+                <span className="font-mono">Anon ID: {item.author_id} • Inspect JSON →</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 6: ACCURACY, SENSITIVITY, RUBRIC & LIMITATIONS (Matching Screenshot 9 & 10) */}
+      <section id="accuracy" className="max-w-6xl mx-auto px-6 py-16 space-y-10 border-t border-stone-200">
+        <div className="space-y-2 max-w-3xl">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-stone-500 font-semibold">
+            VALIDATION, SENSITIVITY & LIMITATIONS
+          </div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-stone-950">
+            29 of 32 audited records matched exact labels (90.6% accuracy)
+          </h2>
+          <p className="text-sm text-stone-600">
+            12 base + 20 new records (044–100) were audited against verbatim text using <code>gemini-3.8-flash</code> (<code>prompt-v2.6-single-truth</code>).
+          </p>
+        </div>
+
+        {/* Per-Theme Accuracy Table */}
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-50 text-stone-500 font-mono text-[11px]">
+                  <th className="py-3 px-4">Theme Cluster</th>
+                  <th className="py-3 px-3">Audited (n)</th>
+                  <th className="py-3 px-3">Exact Match</th>
+                  <th className="py-3 px-4">Per-Theme Accuracy</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {PER_THEME_VALIDATION.map((pt, i) => (
+                  <tr key={i}>
+                    <td className="py-2.5 px-4 font-semibold text-stone-900">{pt.theme}</td>
+                    <td className="py-2.5 px-3 font-mono">{pt.audited}</td>
+                    <td className="py-2.5 px-3 font-mono">{pt.exact}</td>
+                    <td className="py-2.5 px-4 font-mono text-indigo-700 font-semibold">{pt.precision}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 bg-amber-50/70 border-t border-amber-200/70 text-xs text-amber-950 space-y-1.5">
+            <div>
+              <strong>Audit sampling:</strong> 12 base + 20 new records (044–100), hand-picked across channels (not random); single reviewer, no second rater. Membership Parity and Other Friction themes were outside the 32-record sample.
+            </div>
+            <div className="space-y-1 pt-1">
+              {HUMAN_VALIDATION_LOG.map((v, i) => (
+                <div key={i} className="text-[11px]">
+                  <strong>{v.recordId}:</strong> <span className="line-through text-rose-700">{v.before}</span> → <span className="text-emerald-800 font-semibold">{v.after}</span> ({v.rationale})
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Weighting Sensitivity Table */}
+        <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-2xs">
+          <div className="p-5 border-b border-stone-200">
+            <h3 className="text-base font-bold text-stone-900">
+              Channel Weighting Sensitivity (Raw vs. Equal 25%×4 vs. Stratified Weights)
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-50 text-stone-500 font-mono text-[11px]">
+                  <th className="py-3 px-4">Theme</th>
+                  <th className="py-3 px-3">Raw (n/N)</th>
+                  <th className="py-3 px-3">Raw %</th>
+                  <th className="py-3 px-3">Equal Wt</th>
+                  <th className="py-3 px-3 text-indigo-700">Stratified Wt</th>
+                  <th className="py-3 px-4">Sensitivity Range</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {analytics.themeRows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="py-2.5 px-4 font-semibold text-stone-900">{r.name}</td>
+                    <td className="py-2.5 px-3 font-mono">{r.count}/{analytics.total}</td>
+                    <td className="py-2.5 px-3 font-mono">{r.rawPct}%</td>
+                    <td className="py-2.5 px-3 font-mono">{r.equalPct}%</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-indigo-700">{r.stratPct}%</td>
+                    <td className="py-2.5 px-4 font-mono text-stone-600">{r.spread}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Deterministic Labeling Rubric & Methods/Limitations Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 space-y-3 shadow-2xs">
+            <h3 className="text-base font-bold text-stone-900">
+              Deterministic Labeling Rubric (Explicit Signals First, Inference Flagged)
+            </h3>
+            <div className="space-y-2.5">
+              {LABELING_RUBRIC.map((lr, i) => (
+                <div key={i} className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3.5 text-xs space-y-1">
+                  <div className="font-mono font-bold text-indigo-700">{lr.field}</div>
+                  <p className="text-stone-700 leading-relaxed">{lr.rule}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-stone-200 rounded-3xl p-6 space-y-3 shadow-2xs">
+            <h3 className="text-base font-bold text-stone-900">
+              Methods & Limitations
+            </h3>
+            <ul className="list-disc pl-4 space-y-2 text-xs text-stone-700 leading-relaxed">
+              <li><strong>Sampling:</strong> purposive, hand-curated public records across 6 channels (Aug 2025–Nov 2026), not a random sample. N = 100 is directional.</li>
+              <li><strong>Observability:</strong> no anchor-booking timestamps. Repeat labels come from text signals only, and Non-Returner includes inferred cases (upper bound).</li>
+              <li><strong>Silent churn:</strong> invisible in public data and not corrected. The 42% baseline is an assumption (35–50% sensitivity).</li>
+              <li><strong>Reweighting:</strong> channel weights are assumptions, shown as a sensitivity range, not a correction.</li>
+              <li><strong>Language:</strong> Hinglish text is analysed as-is and was not validated separately.</li>
+              <li><strong>Sizing:</strong> pain %, lift % and overlap are PM assumptions, to be validated by the A/B test.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* FLOATING "ASK THE ENGINE" BUTTON */}
+      <button
+        onClick={() => setIsDrawerOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-lg transition cursor-pointer"
+      >
+        <Sparkles className="w-4 h-4" />
+        Ask the engine
+      </button>
+
+      {/* SLIDE-OVER DRAWER FOR LIVE GEMINI EXTRACTOR */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs flex justify-end">
+          <div className="w-full max-w-md bg-white h-full p-6 flex flex-col justify-between overflow-y-auto shadow-2xl">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+                <div>
+                  <h3 className="font-bold text-base text-stone-900">Ask the Discovery Engine</h3>
+                  <p className="text-xs text-stone-500">Live gatekeeper & tagger • <code>gemini-3.8-flash</code></p>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="p-2 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-stone-700 block">
+                  Paste any Indian customer review to test live extraction:
+                </label>
+                <textarea
+                  rows={4}
+                  value={testInput}
+                  onChange={(e) => setTestInput(e.target.value)}
+                  placeholder="e.g., Booked UC salon in Pune 3 times, wish I could see the beautician's profile and pick her again before paying..."
+                  className="w-full bg-stone-50 border border-stone-300 rounded-2xl p-3 text-xs text-stone-900 focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={runLiveExtractor}
+                  disabled={isExtracting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  {isExtracting ? "Running gemini-3.8-flash..." : "Run Live Causal Extraction"}
+                </button>
+              </div>
+
+              {extractorResult && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-bold text-stone-700">Extracted JSON Output:</div>
+                  <pre className="bg-stone-900 text-emerald-300 rounded-2xl p-3.5 text-[11px] overflow-x-auto">
+                    {JSON.stringify(extractorResult, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-stone-200 text-[11px] text-stone-500">
+              Valid India Core records extracted here are automatically appended to the active session corpus (N = {analytics.total}).
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECORD JSON MODAL */}
+      {selectedRecord && (
+        <div
+          onClick={() => setSelectedRecord(null)}
+          className="fixed inset-0 z-50 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm text-stone-900">
+                <FileJson className="w-4 h-4 text-indigo-600" /> Record {selectedRecord.id} (PII Anonymized)
+              </div>
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <pre className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-xs text-stone-800 overflow-x-auto max-h-96">
+              {JSON.stringify(selectedRecord, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
